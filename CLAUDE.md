@@ -42,6 +42,21 @@ before assuming any AI-related code exists to modify.
   a gap like this while working on something else, say so explicitly (e.g.
   add it to section 17) rather than quietly leaving it.
 
+## Git workflow
+
+Remote `origin` is https://github.com/hard71core/ai-loadboard (public).
+`main` is the default branch.
+
+- **Never commit straight to `main`.** For any change, branch off first:
+  `git checkout -b <type>/<short-description>` (e.g. `feat/nl-search`,
+  `fix/load-ownership`, `chore/bump-deps`), commit there.
+- **Push the branch, then stop and ask.** `git push -u origin <branch>`,
+  summarize what changed and confirm CI passed, then ask the user for
+  explicit go-ahead before merging into `main`. Don't merge, fast-forward,
+  or merge your own PR without that confirmation — the branch existing on
+  GitHub is not itself permission to merge it.
+- Only after the user says yes: merge into `main` and push.
+
 ## Commands
 
 ### Full stack (Docker)
