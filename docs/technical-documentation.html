@@ -1,0 +1,1636 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Loadboard — Технічна документація</title>
+<style>
+  :root {
+    --paper: #f4f5f7;
+    --surface: #ffffff;
+    --ink: #12161f;
+    --ink-muted: #57606f;
+    --line: #d9dce2;
+    --accent: #0e7c86;
+    --accent-warm: #b8631f;
+    --good: #1f8a54;
+    --good-bg: #e6f4ec;
+    --warn: #b8631f;
+    --warn-bg: #f8ecdd;
+    --critical: #b3392c;
+    --critical-bg: #f8e6e3;
+    --research-bg: #e3f1f2;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10141b;
+      --surface: #171c26;
+      --ink: #e7e9ee;
+      --ink-muted: #9aa4b6;
+      --line: #2a3140;
+      --accent: #3fb6bd;
+      --accent-warm: #d99a4e;
+      --good: #4caf76;
+      --good-bg: #163427;
+      --warn: #d99a4e;
+      --warn-bg: #362a17;
+      --critical: #e0685a;
+      --critical-bg: #3a1f1c;
+      --research-bg: #142e33;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10141b;
+    --surface: #171c26;
+    --ink: #e7e9ee;
+    --ink-muted: #9aa4b6;
+    --line: #2a3140;
+    --accent: #3fb6bd;
+    --accent-warm: #d99a4e;
+    --good: #4caf76;
+    --good-bg: #163427;
+    --warn: #d99a4e;
+    --warn-bg: #362a17;
+    --critical: #e0685a;
+    --critical-bg: #3a1f1c;
+    --research-bg: #142e33;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.65;
+  }
+  a { color: var(--accent); }
+  ::selection { background: var(--accent); color: #fff; }
+
+  .shell {
+    display: flex;
+    align-items: flex-start;
+    gap: 48px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 24px 140px;
+  }
+
+  /* ---- sidebar / TOC ---- */
+  .toc {
+    position: sticky;
+    top: 28px;
+    flex: 0 0 218px;
+    width: 218px;
+    font-size: 12.5px;
+  }
+  .toc .brand {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ink-muted);
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .toc .brand b { color: var(--ink); display: block; font-size: 13px; letter-spacing: 0; margin-bottom: 2px; }
+  .toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; display: flex; flex-direction: column; }
+  .toc li { counter-increment: toc; }
+  .toc a {
+    display: flex; gap: 8px;
+    padding: 5px 0;
+    text-decoration: none;
+    color: var(--ink-muted);
+    border-left: 2px solid transparent;
+    padding-left: 8px;
+    margin-left: -9px;
+  }
+  .toc a::before {
+    content: counter(toc) ".";
+    font-family: var(--mono);
+    color: var(--accent);
+    flex: 0 0 auto;
+    min-width: 14px;
+  }
+  .toc a:hover { color: var(--ink); border-left-color: var(--line); }
+  .toc .legend {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .toc .legend .pill { align-self: flex-start; }
+
+  /* ---- main column ---- */
+  .main { flex: 1; min-width: 0; max-width: 760px; }
+
+  .cover { padding-bottom: 26px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+  .cover .kicker {
+    font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--accent); margin-bottom: 10px;
+  }
+  .cover h1 { font-family: var(--serif); font-size: 2.15rem; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
+  .cover .subtitle { font-size: 1.05rem; color: var(--ink-muted); margin: 0 0 20px; max-width: 46ch; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 6px 22px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-muted); }
+  .meta-row span b { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.55rem;
+    line-height: 1.25;
+    margin: 3.2rem 0 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    text-wrap: balance;
+    scroll-margin-top: 20px;
+  }
+  h2 .num { color: var(--accent); font-family: var(--mono); font-size: .68em; margin-right: .55em; vertical-align: 2px; }
+  h3 {
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    margin: 1.9rem 0 .6rem;
+    color: var(--ink);
+    scroll-margin-top: 20px;
+  }
+  h4 {
+    font-family: var(--mono);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ink-muted);
+    margin: 1.4rem 0 .5rem;
+  }
+  p { margin: .7rem 0; }
+  ul, ol { margin: .6rem 0; padding-left: 1.3rem; }
+  li { margin: .28rem 0; }
+  li::marker { color: var(--ink-muted); }
+  strong { color: var(--ink); }
+
+  code {
+    font-family: var(--mono); font-size: .87em;
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; margin: .9rem 0;
+    font-family: var(--mono); font-size: 12.3px; line-height: 1.6;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: 1em; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; margin: .9rem 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.2px; background: var(--surface); }
+  th {
+    text-align: left; font-family: var(--mono); text-transform: uppercase; letter-spacing: .03em;
+    font-size: 10.5px; color: var(--ink-muted); border-bottom: 1px solid var(--line);
+    padding: 9px 12px; white-space: nowrap; background: var(--surface);
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+  .num-col { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono);
+    font-size: 10.3px; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 8px 3px; border-radius: 20px; border: 1px solid; white-space: nowrap; line-height: 1.5;
+  }
+  .pill--done { color: var(--good); border-color: var(--good); background: var(--good-bg); }
+  .pill--wip { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); }
+  .pill--planned { color: var(--ink-muted); border-color: var(--line); background: transparent; }
+  .pill--research { color: var(--accent); border-color: var(--accent); background: var(--research-bg); }
+  .pill--risk { color: var(--critical); border-color: var(--critical); background: var(--critical-bg); }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--surface);
+    padding: 10px 16px; border-radius: 0 8px 8px 0; font-size: 13.6px; color: var(--ink-muted);
+    margin: 1rem 0;
+  }
+  .note strong { color: var(--ink); }
+  .note.risk { border-left-color: var(--critical); }
+  .note.warm { border-left-color: var(--accent-warm); }
+
+  figure.diagram {
+    margin: 1.4rem 0; padding: 18px 16px 14px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  figure.diagram svg { width: 100%; height: auto; display: block; color: var(--ink); }
+  figure.diagram figcaption { margin-top: 10px; font-size: 12.3px; color: var(--ink-muted); }
+  .diagram-accent { color: var(--accent); }
+  .diagram-warm { color: var(--accent-warm); }
+  .diagram-critical { color: var(--critical); }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; }
+  .card {
+    border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 13px 15px;
+  }
+  .card h5 { margin: 0 0 6px; font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; color: var(--ink); }
+  .card p { margin: 0; font-size: 12.8px; color: var(--ink-muted); }
+
+  footer.doc-footer {
+    margin-top: 4rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .shell { flex-direction: column; gap: 24px; padding: 28px 18px 100px; }
+    .toc { position: static; width: 100%; flex: none; }
+    .toc ol { flex-direction: row; flex-wrap: wrap; gap: 2px 14px; }
+    .toc a { padding-left: 0; margin-left: 0; border-left: none; }
+    .toc .legend { display: none; }
+    .cards { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    @page { size: A4; margin: 20mm 16mm 18mm; }
+    body { font-size: 10.3pt; }
+    .toc { display: none; }
+    .shell { display: block; max-width: none; padding: 0; }
+    .main { max-width: none; }
+    h2 { page-break-after: avoid; margin-top: 20pt; }
+    h3 { page-break-after: avoid; }
+    table, figure.diagram, pre, .cards { page-break-inside: avoid; }
+    .cover { page-break-after: avoid; }
+    .shell[data-lang="en"] { display: none; }
+    body.lang-en .shell[data-lang="uk"] { display: none; }
+    body.lang-en .shell[data-lang="en"] { display: block; }
+    .lang-switch { display: none; }
+  }
+
+  /* ---- language switch ---- */
+  .lang-switch {
+    position: fixed; top: 16px; right: 16px; z-index: 100;
+    display: flex; gap: 2px; padding: 3px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(18, 22, 31, .08);
+  }
+  .lang-switch button {
+    appearance: none; border: none; background: transparent; cursor: pointer;
+    font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--ink-muted); padding: 6px 12px; border-radius: 16px; line-height: 1;
+  }
+  .lang-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .lang-switch button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+  .lang-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .shell[data-lang="en"] { display: none; }
+  body.lang-en .shell[data-lang="uk"] { display: none; }
+  body.lang-en .shell[data-lang="en"] { display: flex; }
+
+  @media (max-width: 900px) {
+    body.lang-en .shell[data-lang="en"] { display: flex; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lang-switch" role="group" aria-label="Мова документа / Document language">
+  <button type="button" data-lang="uk" aria-pressed="true">UA</button>
+  <button type="button" data-lang="en" aria-pressed="false">EN</button>
+</div>
+
+<div class="shell" data-lang="uk">
+
+  <aside class="toc">
+    <div class="brand"><b>AI Loadboard</b>Технічна документація · v0.1</div>
+    <nav>
+      <ol>
+        <li><a href="#s1">Про документ</a></li>
+        <li><a href="#s2">Огляд і рівень зрілості</a></li>
+        <li><a href="#s3">Архітектура</a></li>
+        <li><a href="#s4">Технологічний стек</a></li>
+        <li><a href="#s5">Доменна модель даних</a></li>
+        <li><a href="#s6">Сервіси бекенду</a></li>
+        <li><a href="#s7">AI/ML підсистема</a></li>
+        <li><a href="#s8">API</a></li>
+        <li><a href="#s9">Автентифікація й ролі</a></li>
+        <li><a href="#s10">Безпека</a></li>
+        <li><a href="#s11">Інфраструктура й DevOps</a></li>
+        <li><a href="#s12">Продуктивність і масштаб</a></li>
+        <li><a href="#s13">Спостережуваність</a></li>
+        <li><a href="#s14">Зовнішні інтеграції</a></li>
+        <li><a href="#s15">Тестування та якість</a></li>
+        <li><a href="#s16">Технічна дорожня карта</a></li>
+        <li><a href="#s17">Борг і обмеження</a></li>
+      </ol>
+    </nav>
+    <div class="legend">
+      <span class="pill pill--done">MVP · готово</span>
+      <span class="pill pill--wip">Фаза 2</span>
+      <span class="pill pill--planned">Фаза 3</span>
+      <span class="pill pill--research">R&amp;D</span>
+      <span class="pill pill--risk">Ризик</span>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="cover">
+      <div class="kicker">Інженерна специфікація · внутрішній документ</div>
+      <h1>AI Loadboard — технічна документація</h1>
+      <p class="subtitle">Архітектура системи, доменна модель, AI-підсистема та інженерні рішення — від того, що вже працює, до того, що спроєктовано на масштаб.</p>
+      <div class="meta-row">
+        <span>Версія документа <b>0.1</b></span>
+        <span>Дата <b>15.08.2026</b></span>
+        <span>Статус продукту <b>MVP / демо</b></span>
+        <span>Повʼязаний документ <b>Project Overview (для інвесторів)</b></span>
+      </div>
+    </div>
+
+    <!-- 1 -->
+    <h2 id="s1"><span class="num">01</span>Про документ</h2>
+    <p>Це технічна специфікація проєкту AI Loadboard — вантажної біржі з прямим з'єднанням вантажовідправника і перевізника, без брокера-посередника. На відміну від інвесторського огляду (<code>project-documentation.html</code>), тут немає маркетингового спрощення: документ описує систему так, як її бачить інженерна команда — включно з тим, що ще не побудовано.</p>
+    <p>Аудиторія: технічні співзасновники, майбутні інженери, що приєднуються до команди, і технічний due diligence з боку інвестора.</p>
+    <p>Кожен розділ і кожен рядок таблиці позначені міткою зрілості:</p>
+    <p>
+      <span class="pill pill--done">MVP · готово</span> — реалізовано і працює в поточному демо-каркасі·
+      <span class="pill pill--wip">Фаза 2</span> — у найближчому спринті розробки·
+      <span class="pill pill--planned">Фаза 3</span> — заплановано, дизайн ще не заморожений·
+      <span class="pill pill--research">R&amp;D</span> — потребує дослідження/прототипування моделі перед комітом у продукт·
+      <span class="pill pill--risk">Ризик</span> — відомий технічний борг або відкрите питання.
+    </p>
+    <p>Документ навмисно не приховує незрілість поточної кодової бази: MVP — це навмисно спрощений транзакційний каркас (реєстрація → публікація вантажу → взяття вантажу → завершення), без жодної AI-функції, зібраний, щоб перевірити базовий цикл shipper↔carrier до інвестиції в ML-шар.</p>
+
+    <!-- 2 -->
+    <h2 id="s2"><span class="num">02</span>Огляд системи та рівень зрілості</h2>
+    <p>AI Loadboard — двостороння платформа: вантажовідправник публікує вантаж, перевізник бачить його і бере напряму, без брокера. Довгострокове бачення — не лише дошка оголошень, а система, де AI виконує роботу диспетчера й брокера: підбирає вантаж, прогнозує ставку, веде перші переговори, перевіряє контрагента і обробляє документи.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Компонент</th><th>Поточний стан (MVP)</th><th>Цільовий стан</th></tr></thead>
+        <tbody>
+          <tr><td>Клієнт</td><td>React SPA, один екран, ручний <code>fetch</code></td><td>React SPA + мобільний застосунок (React Native), кешування запитів, realtime через WebSocket</td></tr>
+          <tr><td>Бекенд</td><td>Один монолітний FastAPI-сервіс</td><td>Core-сервіс + вісім AI-сервісів, розв'язаних через шину подій</td></tr>
+          <tr><td>База даних</td><td>Один PostgreSQL, 2 таблиці (<code>users</code>, <code>loads</code>)</td><td>PostgreSQL (OLTP) + pgvector/векторна БД + Redis (кеш/черги) + обʼєктне сховище документів</td></tr>
+          <tr><td>Автентифікація</td><td>Email + пароль, JWT без refresh</td><td>JWT + refresh-токени, MFA, SSO для enterprise-акаунтів</td></tr>
+          <tr><td>Матчинг вантажів</td><td>Лінійний список, сортування за датою</td><td>ML-ранжування під профіль перевізника</td></tr>
+          <tr><td>AI-функції</td><td>Відсутні</td><td>7 AI-сервісів (розділ 7)</td></tr>
+          <tr><td>Інфраструктура</td><td>Docker Compose, один хост</td><td>Kubernetes, кілька середовищ, автоскейлінг</td></tr>
+          <tr><td>Спостережуваність</td><td>Немає — лише логи <code>uvicorn</code> у stdout</td><td>Метрики, трейсинг, структуровані логи, алертинг, AI-eval пайплайни</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <strong>Навмисне рішення, не недогляд.</strong> AI не додається «зверху» на готову дошку оголошень — уся архітектура нижче спроєктована так, щоб AI-сервіси підключалися як окремі, незалежно деплойовані споживачі подій, а не як виклики всередині монолітного контролера. Це головна архітектурна ставка проєкту.
+    </div>
+
+    <!-- 3 -->
+    <h2 id="s3"><span class="num">03</span>Архітектура верхнього рівня</h2>
+    <p>Система розділена на дві половини з різними вимогами до надійності й латентності. <strong>Core Loadboard Service</strong> — транзакційне ядро (реєстрація, вантажі, статуси, платежі в майбутньому): має бути швидким, консистентним, з жорсткими SLA. <strong>AI-сервіси</strong> — обчислювально важкі, залежать від зовнішніх LLM/ML-провайдерів, можуть відповідати з затримкою в секунди і не повинні блокувати транзакційний шлях. Тому вони зв'язані асинхронно через шину подій, а не прямими синхронними викликами.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 860 610" role="img" aria-label="Клієнт звертається через API Gateway до Core-сервісу, який пише в PostgreSQL і публікує подію в шину подій; AI-сервіси споживають події з шини, використовують спільну AI-інфраструктуру та зовнішні API, і повертають результат назад через шину, який доходить до клієнта через WebSocket або поллінг.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.4">
+          <!-- client -->
+          <rect x="270" y="18" width="320" height="46" rx="7"></rect>
+        </g>
+        <text x="430" y="46" text-anchor="middle" font-size="13" fill="currentColor">Web-клієнт · React / TypeScript</text>
+
+        <line x1="430" y1="64" x2="430" y2="96" marker-end="url(#arrow)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="444" y="84" font-size="10.5" fill="currentColor">HTTPS · REST</text>
+
+        <rect x="230" y="98" width="400" height="46" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="430" y="126" text-anchor="middle" font-size="13" fill="currentColor">API Gateway / BFF — auth · rate-limit · routing</text>
+
+        <line x1="430" y1="144" x2="430" y2="176" marker-end="url(#arrow)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <rect x="130" y="178" width="300" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="280" y="200" text-anchor="middle" font-size="13" fill="currentColor">Core Loadboard Service</text>
+        <text x="280" y="217" text-anchor="middle" font-size="10.5" fill="currentColor">FastAPI · сьогодні єдиний реалізований сервіс</text>
+
+        <rect x="470" y="178" width="220" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="580" y="200" text-anchor="middle" font-size="13" fill="currentColor">PostgreSQL</text>
+        <text x="580" y="217" text-anchor="middle" font-size="10.5" fill="currentColor">OLTP · джерело правди</text>
+
+        <line x1="430" y1="204" x2="470" y2="204" marker-end="url(#arrow)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="405" y="196" font-size="9.5" text-anchor="middle" fill="currentColor">reads/writes</text>
+
+        <line x1="280" y1="230" x2="280" y2="262" marker-end="url(#arrow)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="294" y="250" font-size="10.5" fill="currentColor">публікує подію</text>
+
+        <rect x="130" y="264" width="500" height="42" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="380" y="290" text-anchor="middle" font-size="12" fill="currentColor" font-family="ui-monospace, monospace">шина подій · load.created / offer.made / doc.uploaded</text>
+
+        <line x1="380" y1="306" x2="380" y2="338" marker-end="url(#arrow)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="394" y="326" font-size="10.5" fill="currentColor">асинхронний виклик</text>
+
+        <rect x="170" y="340" width="480" height="66" rx="8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 3"></rect>
+        <text x="410" y="365" text-anchor="middle" font-size="13" fill="currentColor" class="diagram-accent" font-weight="600">AI-сервіси (7)</text>
+        <text x="410" y="384" text-anchor="middle" font-size="10.3" fill="currentColor">Matching · Pricing · Negotiation · Trust · Document Intel. · NL Search · ETA</text>
+
+        <line x1="300" y1="406" x2="255" y2="448" marker-end="url(#arrow)" stroke="currentColor" stroke-width="1.4"></line>
+        <line x1="520" y1="406" x2="585" y2="448" marker-end="url(#arrow)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <rect x="110" y="450" width="290" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="255" y="474" text-anchor="middle" font-size="12.5" fill="currentColor">Спільна AI-інфраструктура</text>
+        <text x="255" y="492" text-anchor="middle" font-size="10.3" fill="currentColor">Vector DB · LLM Gateway · Feature Store</text>
+
+        <rect x="440" y="450" width="290" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="585" y="474" text-anchor="middle" font-size="12.5" fill="currentColor">Зовнішні API</text>
+        <text x="585" y="492" text-anchor="middle" font-size="10.3" fill="currentColor">Maps/Traffic · Weather · ELD · Кредит-бюро · e-Sign</text>
+
+        <path d="M 650 373 L 780 373 L 780 41 L 594 41" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow)"></path>
+        <text x="783" y="200" font-size="10.3" fill="currentColor" transform="rotate(90 783 200)" text-anchor="middle">результат: WS push / поллінг</text>
+
+        <text x="16" y="580" font-size="10.3" fill="currentColor" opacity=".75">Легенда: суцільна лінія — синхронний запит; пунктир — асинхронний результат, що повертається клієнту.</text>
+      </svg>
+      <figcaption>Мал. 1 — Транзакційне ядро і AI-сервіси розв'язані шиною подій: Core пише у Postgres і публікує подію, AI-сервіси споживають її асинхронно й повертають результат клієнту окремим каналом (WS/поллінг), не блокуючи основний запит.</figcaption>
+    </figure>
+
+    <p>Наразі реалізований лише прямокутник <strong>Core Loadboard Service ↔ PostgreSQL</strong> у верхній половині схеми — без API Gateway, без шини подій, без жодного AI-сервіса. Решта — цільова архітектура, під яку вже зараз проєктується доменна модель (розділ 5) і контракти подій.</p>
+
+    <h3>Чому шина подій, а не прямі виклики</h3>
+    <ul>
+      <li><strong>Ізоляція збоїв.</strong> Якщо LLM-провайдер деградує чи впав, публікація вантажу і взяття вантажу продовжують працювати — це різні відмовостійкі домени.</li>
+      <li><strong>Незалежне масштабування й деплой.</strong> Negotiation Agent можна викотити окремо від Core, дати йому свій пул воркерів і GPU/API-бюджет, не чіпаючи транзакційний код.</li>
+      <li><strong>Заміна моделі без даунтайму ядра.</strong> Провайдер LLM або алгоритм скорингу можна змінити, підключивши нову версію споживача до тієї самої події.</li>
+      <li><strong>Аудит за замовчуванням.</strong> Кожна подія — це запис у журналі: хто що запропонував і коли, важливо для спорів «AI щось пообіцяв контрагенту».</li>
+    </ul>
+
+    <!-- 4 -->
+    <h2 id="s4"><span class="num">04</span>Технологічний стек</h2>
+
+    <h3>Клієнт</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Технологія</th><th>Роль</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>React 18 + TypeScript</td><td>SPA, компонентний UI</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Vite</td><td>Dev-сервер і білд</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Ручний <code>fetch</code> + React Context</td><td>Доступ до API та стан автентифікації (<code>AuthContext.tsx</code>)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>TanStack Query</td><td>Кешування запитів, повторні спроби, інвалідація</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>WebSocket-клієнт</td><td>Realtime-оновлення статусів вантажу, офери AI-агента</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>React Native</td><td>Мобільний застосунок для перевізників (сповіщення, GPS)</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Бекенд і дані</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Технологія</th><th>Роль</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>Python 3.12 + FastAPI</td><td>REST API, валідація через Pydantic</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>SQLAlchemy 2.x</td><td>ORM, декларативні моделі</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>PostgreSQL 16</td><td>Основне сховище (OLTP)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>python-jose + passlib/bcrypt</td><td>JWT, хешування паролів</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Redis</td><td>Кеш сесій, rate-limit лічильники, черга задач (Celery/RQ broker)</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>pgvector (розширення Postgres)</td><td>Векторний пошук для NL-запитів та матчингу — старт без окремої векторної БД</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>Kafka / Redis Streams</td><td>Шина подій між Core і AI-сервісами</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+          <tr><td>S3-сумісне обʼєктне сховище</td><td>Зберігання документів (BOL/POD/rate confirmation)</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>Alembic</td><td>Міграції схеми БД (замість <code>create_all</code> на старті)</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>AI / ML</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Технологія</th><th>Роль</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>LLM Gateway (LiteLLM-подібний шар)</td><td>Єдина точка виклику моделей різних провайдерів, з фолбеком і лічильником вартості</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Claude / GPT-клас моделей (function calling)</td><td>Negotiation Agent, NL Search, структурування документів</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Sentence-embedding модель (напр. клас <code>bge</code>/<code>e5</code>)</td><td>Векторизація вантажів і запитів для матчингу й пошуку</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Gradient boosting (LightGBM/XGBoost)</td><td>Прогноз ринкової ставки, ETA, trust-скоринг — табличні дані, пояснюваність важливіша за глибокі мережі</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>OCR + layout-модель (напр. клас LayoutLM/Textract)</td><td>Розпізнавання BOL/POD/rate confirmation</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>MLflow / реєстр моделей</td><td>Версіонування моделей, відтворюваність</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Інфраструктура та спостережуваність</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Технологія</th><th>Роль</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>Docker + Docker Compose</td><td>Локальний запуск трьох контейнерів (db/backend/frontend)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Kubernetes (керований — EKS/GKE)</td><td>Оркестрація в проді, автоскейлінг AI-воркерів окремо від Core</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+          <tr><td>GitHub Actions</td><td>CI: лінт, тести, білд образів, деплой</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>Terraform</td><td>Інфраструктура як код (мережа, БД, кластер)</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+          <tr><td>OpenTelemetry + Prometheus/Grafana</td><td>Метрики й трейсинг наскрізних запитів, включно з AI-викликами</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+          <tr><td>Sentry</td><td>Трекінг помилок фронтенду і бекенду</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 5 -->
+    <h2 id="s5"><span class="num">05</span>Доменна модель даних</h2>
+    <p>Поточна схема — дві таблиці, свідомо мінімальні для MVP:</p>
+    <pre><code>-- backend/app/models.py — те, що реально існує сьогодні
+
+users(id, email UNIQUE, hashed_password, company_name, role ENUM(shipper|carrier), created_at)
+
+loads(id, title, origin, destination, equipment_type DEFAULT 'Dry Van',
+      weight_lbs, price_usd NUMERIC(10,2), shipper_name, carrier_name NULLABLE,
+      status ENUM(open|accepted|completed), created_at)</code></pre>
+
+    <div class="note risk">
+      <strong>Помітний розрив зараз:</strong> <code>loads.shipper_name</code> і <code>carrier_name</code> — вільні текстові поля, не зовнішні ключі на <code>users</code>. Вантаж технічно не привʼязаний до автентифікованого користувача, який його опублікував чи взяв. Це працює для демо, але перше, що змінюється в Фазі 2 — <code>shipper_id</code>/<code>carrier_id</code> як FK з перевіркою власності на рівні API. Деталі — розділ 17.
+    </div>
+
+    <h3>Цільова схема (Фаза 2–3)</h3>
+    <p>Розширення додає компанії (для trust-скорингу й MC/DOT-номерів), офери та історію переговорів, документи з результатами розпізнавання, знімки прогнозів ставки:</p>
+    <pre><code>CREATE TABLE companies (
+  id            BIGSERIAL PRIMARY KEY,
+  legal_name    TEXT NOT NULL,
+  mc_number     TEXT UNIQUE,      -- Motor Carrier number
+  dot_number    TEXT UNIQUE,
+  trust_score   NUMERIC(4,1),     -- кеш останнього скору, 0–100
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE offers (
+  id            BIGSERIAL PRIMARY KEY,
+  load_id       BIGINT REFERENCES loads(id),
+  carrier_id    BIGINT REFERENCES users(id),
+  price_usd     NUMERIC(10,2) NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending', -- pending|countered|accepted|rejected|expired
+  source        TEXT NOT NULL DEFAULT 'human',   -- human|ai_agent
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE negotiation_messages (
+  id              BIGSERIAL PRIMARY KEY,
+  offer_id        BIGINT REFERENCES offers(id),
+  sender          TEXT NOT NULL,   -- shipper|carrier|ai_agent
+  channel         TEXT NOT NULL,   -- chat|email|sms|voice_transcript
+  body            TEXT NOT NULL,
+  proposed_price  NUMERIC(10,2),
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE trust_scores (
+  company_id      BIGINT REFERENCES companies(id),
+  score           NUMERIC(4,1) NOT NULL,   -- 0–100
+  factors         JSONB NOT NULL,          -- {"payment_history":.., "insurance_valid":.., "doc_fraud_flags":..}
+  model_version   TEXT NOT NULL,
+  computed_at     TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (company_id, computed_at)
+);
+
+CREATE TABLE market_rate_snapshots (
+  lane            TEXT NOT NULL,   -- напр. 'DAL-HOU'
+  equipment_type  TEXT NOT NULL,
+  predicted_at    TIMESTAMPTZ NOT NULL,
+  horizon_days    INT NOT NULL,
+  predicted_usd   NUMERIC(10,2) NOT NULL,
+  confidence_low  NUMERIC(10,2),
+  confidence_high NUMERIC(10,2),
+  model_version   TEXT NOT NULL
+);
+
+CREATE TABLE documents (
+  id              BIGSERIAL PRIMARY KEY,
+  load_id         BIGINT REFERENCES loads(id),
+  doc_type        TEXT NOT NULL,   -- bol|pod|rate_confirmation|insurance_coi
+  storage_uri     TEXT NOT NULL,   -- s3://...
+  extraction      JSONB,           -- структуровані поля з IDP-пайплайну
+  confidence      NUMERIC(4,3),
+  review_status   TEXT NOT NULL DEFAULT 'auto', -- auto|needs_review|reviewed
+  created_at      TIMESTAMPTZ DEFAULT now()
+);</code></pre>
+    <p><code>loads.embedding vector(768)</code> додається як колонка pgvector для семантичного пошуку й матчингу (розділ 7.3/7.6) — окрема векторна БД не потрібна, поки обсяг вантажів не вимагає ANN-індексів поза Postgres.</p>
+
+    <!-- 6 -->
+    <h2 id="s6"><span class="num">06</span>Сервіси бекенду</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Сервіс</th><th>Відповідальність</th><th>Ключова техніка</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>Core Loadboard Service</td><td>Користувачі, вантажі, статуси, офери, оплата (майбутнє)</td><td>FastAPI + Postgres</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Matching Service</td><td>Ранжування відкритих вантажів під профіль і історію перевізника</td><td>pgvector + gradient-boosted ranking</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Pricing Service</td><td>Прогноз ринкової ставки на маршруті на N днів вперед</td><td>LightGBM / часові ряди, знімки в <code>market_rate_snapshots</code></td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Negotiation Service</td><td>LLM-агент, що веде першу комунікацію й торгується в заданих межах</td><td>LLM function calling + guardrails (розділ 7.1)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Trust Service</td><td>Скоринг надійності контрагента, флаги подвійного брокериджу</td><td>Табличний класифікатор + зовнішні перевірки (FMCSA, страхові)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Document Intelligence Service</td><td>OCR і структурування BOL/POD/rate confirmation</td><td>OCR + layout-модель + LLM-екстракція (розділ 7.2)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Search Service</td><td>Пошук вантажів природною мовою</td><td>LLM parsing → структурований фільтр + векторний пошук</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>ETA Service</td><td>Оцінка часу прибуття з урахуванням трафіку/погоди/HOS</td><td>Регресія + телематика/трафік API</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Notification Service</td><td>Push/email/SMS про зміну статусу вантажу, нові офери</td><td>WebSocket + черга задач</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Усі AI-сервіси — окремі деплойменти, що читають зі спільної шини подій і пишуть результат назад у Postgres через власний вузький API-контракт (не мають прямого доступу до таблиць одне одного). Це свідомо ближче до модульного моноліту з чіткими межами, ніж до «мікросервісів заради мікросервісів» — команда з 2–5 інженерів не обслужить 9 незалежних репозиторіїв; межі проведені так, щоб їх можна було фізично розрізати пізніше без переписування доменної логіки.</p>
+
+    <!-- 7 -->
+    <h2 id="s7"><span class="num">07</span>AI/ML підсистема</h2>
+    <p>Сім продуктових AI-функцій зі спільною інфраструктурою. Спільний принцип для всіх: <strong>модель ніколи не є єдиною точкою відмови</strong> — кожен сервіс має детерміністичний fallback (порожній список рекомендацій, останню відому ставку, ескалацію людині), і жоден AI-виклик не блокує основний транзакційний шлях (розділ 3).</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Функція</th><th>Підхід</th><th>Ключові дані</th><th>Людина в циклі</th></tr></thead>
+        <tbody>
+          <tr><td>Розумний підбір вантажу</td><td>Ранжування (embeddings + gradient boosting)</td><td>Маршрут, порожній пробіг, історія прийнятих вантажів</td><td>Ні — лише сортування, вибір за перевізником</td></tr>
+          <tr><td>Прогноз ринкової ставки</td><td>Часові ряди / gradient boosting</td><td>Історичні ставки по лейнах, паливо, сезонність, попит/пропозиція</td><td>Ні — довірчий інтервал показується явно</td></tr>
+          <tr><td>AI-асистент переговорів</td><td>LLM-агент із function calling</td><td>Межі ціни від shipper, історія лейну, повідомлення контрагента</td><td>Так — ескалація за межами довіри (розділ 7.1)</td></tr>
+          <tr><td>Скоринг надійності</td><td>Табличний класифікатор + правила</td><td>Історія платежів, FMCSA-дані, страхові документи, флаги шахрайства</td><td>Так — низький скор блокує авто-матчинг, потребує ручного review</td></tr>
+          <tr><td>Автоматизація документів</td><td>OCR + LLM-екстракція</td><td>Скан/фото BOL, POD, rate confirmation</td><td>Так — нижче порогу впевненості (розділ 7.2)</td></tr>
+          <tr><td>Пошук природною мовою</td><td>LLM parsing → фільтр + векторний пошук</td><td>Вільний текстовий запит користувача</td><td>Ні — детерміністичний фолбек на форму-фільтр</td></tr>
+          <tr><td>Прогноз ETA</td><td>Регресія на телематиці/трафіку</td><td>GPS перевізника, трафік, погода, HOS-ліміти водія</td><td>Ні</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7.1 AI-асистент переговорів</h3>
+    <p>Найризикованіша функція продукту: модель веде реальну комунікацію від імені платформи і може «пообіцяти» ціну. Тому це єдиний AI-сервіс із жорстким контуром безпеки, а не просто LLM-викликом.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 660 420" role="img" aria-label="Повідомлення від контрагента надходить до Negotiation Agent, який звіряється з панеллю guardrails і перевіряє межі ціни; якщо пропозиція в межах, агент автоматично надсилає контрпропозицію, а контрагент може відповісти новим раундом; якщо поза межами або невпевнено, запит ескалюється диспетчеру-людині.">
+        <defs>
+          <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+
+        <rect x="30" y="18" width="270" height="50" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="165" y="40" text-anchor="middle" font-size="12.5" fill="currentColor">Повідомлення від контрагента</text>
+        <text x="165" y="57" text-anchor="middle" font-size="10" fill="currentColor">(chat / email / SMS)</text>
+
+        <line x1="165" y1="68" x2="165" y2="98" marker-end="url(#arrow2)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <rect x="30" y="100" width="270" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="165" y="122" text-anchor="middle" font-size="12.5" fill="currentColor">Negotiation Agent (LLM)</text>
+        <text x="165" y="139" text-anchor="middle" font-size="9.5" font-family="ui-monospace, monospace" fill="currentColor">get_market_rate() · check_bounds()</text>
+
+        <line x1="300" y1="126" x2="338" y2="126" marker-end="url(#arrow2)" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"></line>
+        <text x="319" y="116" font-size="9" text-anchor="middle" fill="currentColor">звіряється</text>
+
+        <rect x="340" y="18" width="300" height="150" rx="8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3"></rect>
+        <text x="490" y="38" text-anchor="middle" font-size="12" fill="currentColor" class="diagram-accent" font-weight="600">Guardrails</text>
+        <text x="354" y="58" font-size="10" fill="currentColor">· жорсткі межі ціни (min/max) від shipper</text>
+        <text x="354" y="74" font-size="10" fill="currentColor">· ліміт 3 авто-контрраунди</text>
+        <text x="354" y="90" font-size="10" fill="currentColor">· заборонені теми: гарантії, персональні дані</text>
+        <text x="354" y="106" font-size="10" fill="currentColor">· кожне повідомлення логується для аудиту</text>
+        <text x="354" y="122" font-size="10" fill="currentColor">· невпевненість моделі → ескалація за замовчуванням</text>
+        <text x="354" y="138" font-size="10" fill="currentColor">· без прямого доступу до персональних даних</text>
+        <text x="354" y="154" font-size="10" fill="currentColor">  контрагента поза потрібними полями</text>
+
+        <line x1="165" y1="152" x2="165" y2="182" marker-end="url(#arrow2)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <polygon points="165,182 260,224 165,266 70,224" fill="none" stroke="currentColor" stroke-width="1.4"></polygon>
+        <text x="165" y="220" text-anchor="middle" font-size="10.5" fill="currentColor">у межах,</text>
+        <text x="165" y="233" text-anchor="middle" font-size="10.5" fill="currentColor">заданих shipper'ом?</text>
+
+        <line x1="260" y1="224" x2="338" y2="224" marker-end="url(#arrow2)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="299" y="214" font-size="10" text-anchor="middle" fill="currentColor">так</text>
+
+        <rect x="340" y="198" width="300" height="54" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="490" y="221" text-anchor="middle" font-size="12" fill="currentColor">Авто-контрпропозиція надсилається</text>
+        <text x="490" y="238" text-anchor="middle" font-size="9.5" fill="currentColor">offer.status = countered</text>
+
+        <line x1="165" y1="266" x2="165" y2="296" marker-end="url(#arrow2)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="178" y="284" font-size="10" fill="currentColor">ні / невпевнено</text>
+
+        <rect x="30" y="298" width="270" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4" class="diagram-critical"></rect>
+        <text x="165" y="320" text-anchor="middle" font-size="12" fill="currentColor">Ескалація диспетчеру-людині</text>
+        <text x="165" y="337" text-anchor="middle" font-size="9.5" fill="currentColor">offer.status = needs_human</text>
+
+        <path d="M 490 252 L 490 386 L 15 386 L 15 43 L 30 43" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrow2)"></path>
+        <text x="252" y="377" text-anchor="middle" font-size="9.5" fill="currentColor">новий раунд, якщо контрагент відповідає</text>
+      </svg>
+      <figcaption>Мал. 2 — Агент пропонує ціну лише в межах, які задав shipper заздалегідь; вихід за межі або невпевненість моделі завжди веде до ескалації людині, ніколи не до «здогадки» AI.</figcaption>
+    </figure>
+
+    <p><strong>Чому саме так:</strong> LLM за конструкцією не гарантує дотримання числових меж лише інструкцією в промпті — тому перевірка меж винесена в детерміністичний код (<code>check_bounds()</code>), а не довірена моделі. Агент може пропонувати формулювання і тон, але не може обійти хардкоджену перевірку суми.</p>
+
+    <h3>7.2 Автоматизація документообігу</h3>
+    <p>Пайплайн розпізнавання BOL/POD/rate confirmation: <code>upload → OCR/layout → LLM-структурування у JSON → перевірка впевненості → авто-збереження або черга ручної перевірки</code>. Поле <code>confidence</code> з таблиці <code>documents</code> (розділ 5) — це мінімум confidence по обов'язкових полях (сума, дата, підпис/номер вантажу); нижче порогу (напр. 0.90) документ іде в чергу ручної перевірки замість автоматичного застосування. Кожне ручне виправлення записується як приклад для донавчання/промпт-тюнінгу — цикл зворотного зв'язку описаний у розділі 13.
+
+    <h3>7.3–7.7 Інші AI-сервіси — принципи проєктування</h3>
+    <div class="cards">
+      <div class="card">
+        <h5>Matching (7.3)</h5>
+        <p>Ембединги вантажу (маршрут, тип кузова, вага, час) + профіль перевізника (домашня база, вподобані лейни, історія прийнять/відмов) → cosine-подібність як базовий сигнал, gradient boosting поверх — для калібрування під фактичну конверсію в прийняття.</p>
+      </div>
+      <div class="card">
+        <h5>Pricing (7.4)</h5>
+        <p>Прогноз на лейн-рівні (origin-dest-equipment), горизонт 1–7 днів, з довірчим інтервалом, а не точковим числом — платформа явно показує невпевненість, а не видає її за факт.</p>
+      </div>
+      <div class="card">
+        <h5>Trust Scoring (7.5)</h5>
+        <p>0–100 з поясненими факторами (JSONB <code>factors</code>), не «чорна скринька» — перевізник/shipper бачить, чому скор такий, і може оскаржити. Низький скор не банить автоматично, а знижує пріоритет у матчингу і додає попередження.</p>
+      </div>
+      <div class="card">
+        <h5>NL Search (7.6)</h5>
+        <p>LLM переводить вільний запит («рефрижератор із Далласа цього тижня до 900») у структурований фільтр + опційний векторний пошук за смисловою близькістю; завжди є детерміністичний фолбек на форму з фільтрами, якщо парсинг непевний.</p>
+      </div>
+      <div class="card">
+        <h5>ETA (7.7)</h5>
+        <p>Регресія поверх GPS-телематики перевізника (де є доступ), трафіку, погоди і залишку годин водіння (HOS) — точність деградує пояснено (ширший інтервал), якщо телематика недоступна, а не мовчки.</p>
+      </div>
+      <div class="card">
+        <h5>Спільне для всіх</h5>
+        <p>Кожна модель має версію (<code>model_version</code>), логується вхід/вихід для офлайн-оцінки, і має задокументований fallback на детермінізм при відмові.</p>
+      </div>
+    </div>
+
+    <h3>7.8 Спільна AI-інфраструктура</h3>
+    <ul>
+      <li><strong>LLM Gateway</strong> — єдина точка виклику моделей: абстрагує провайдера (можливість перемкнутись між моделями без зміни коду сервісів), рахує вартість токенів на запит, застосовує тайм-аути й fallback на меншу/дешевшу модель при відмові основного провайдера.</li>
+      <li><strong>Редагування PII перед відправкою назовні.</strong> Персональні дані водія/контактні дані контрагента маскуються перед тим, як текст іде до стороннього LLM-провайдера, і відновлюються після відповіді — вимога для документообігу з ПІБ водіїв і номерами телефонів.</li>
+      <li><strong>Реєстр промптів і eval-набори.</strong> Кожен промпт версіонується; зміна промпту прогонюється проти зафіксованого набору реальних кейсів (regression suite для AI, а не лише для коду) перед викаткою.</li>
+      <li><strong>Canary rollout моделей.</strong> Нова версія моделі/промпту спершу отримує невелику частку трафіку, порівнюється за метриками якості й вартості, і лише потім масштабується на 100%.</li>
+      <li><strong>Бюджет вартості й circuit breaker.</strong> Ліміт витрат на AI-виклики за період; при перевищенні — деградація до дешевших/детерміністичних шляхів, а не мовчазне зростання рахунку.</li>
+      <li><strong>Feature Store.</strong> Спільні ознаки (історія лейну, поведінка перевізника) обчислюються один раз і перевикористовуються Matching, Pricing і Trust сервісами замість дублювання логіки.</li>
+    </ul>
+
+    <!-- 8 -->
+    <h2 id="s8"><span class="num">08</span>API</h2>
+    <h3>Конвенції</h3>
+    <ul>
+      <li>Базовий шлях <code>/api</code>, JSON тіла запитів/відповідей, помилки — <code>{"detail": "..."}</code> (стандартний формат FastAPI/Pydantic).</li>
+      <li>Автентифікація — заголовок <code>Authorization: Bearer &lt;JWT&gt;</code>.</li>
+      <li>Публічна специфікація автогенерується FastAPI: <code>/docs</code> (Swagger UI) та <code>/openapi.json</code>.</li>
+      <li>Заплановано на Фазу 2: версіонування шляху (<code>/api/v1/...</code>), курсорна пагінація (<code>?cursor=</code>) для списків, ідемпотентні ключі для <code>POST /offers</code>.</li>
+    </ul>
+
+    <h3>Реалізовані ендпоінти (MVP)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Метод</th><th>Шлях</th><th>Опис</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Перевірка живості сервісу</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Реєстрація (email, пароль, компанія, роль)</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Вхід, видає JWT на 7 днів</td><td>—</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Поточний користувач за токеном</td><td>Bearer</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>Список вантажів, опційний фільтр <code>?status=</code></td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Публікація вантажу</td><td>— <span class="pill pill--risk">має бути Bearer</span></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Взяти вантаж напряму</td><td>— <span class="pill pill--risk">має бути Bearer</span></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Позначити завершеним</td><td>— <span class="pill pill--risk">має бути Bearer</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note risk"><strong>Розбіжність із README:</strong> публічний опис демо каже «доступно тільки авторизованим shipper/carrier», але в коді (<code>main.py</code>) ці три роути не мають <code>Depends(get_current_user)</code> і не перевіряють роль — сьогодні їх може викликати будь-хто без токена. Це перший пункт у розділі 17.</div>
+
+    <h3>Заплановані ендпоінти (Фаза 2–3)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Метод</th><th>Шлях</th><th>Опис</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/matches</code></td><td>AI-рекомендації вантажів під профіль перевізника</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Пошук вантажів природною мовою</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/rates/forecast</code></td><td>Прогноз ставки за лейном/типом кузова/датою</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/offers</code></td><td>Створити офер (людиною або AI-агентом)</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Контрпропозиція</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/companies/{id}/trust-score</code></td><td>Скор надійності з поясненими факторами</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/documents</code></td><td>Завантажити BOL/POD/rate confirmation</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/eta</code></td><td>Прогноз часу прибуття</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Оновити access-токен за refresh-токеном</td></tr>
+          <tr><td><code>WS</code></td><td><code>/ws/notifications</code></td><td>Realtime-сповіщення: нові офери, зміни статусу</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 9 -->
+    <h2 id="s9"><span class="num">09</span>Автентифікація, авторизація й ролі</h2>
+    <p>Сьогодні: email+пароль → <code>bcrypt</code>-хеш → JWT (HS256, <code>sub</code>=email, термін дії 7 днів) з <code>python-jose</code>, без refresh-токена й без відкликання (вихід — лише видалення токена з <code>localStorage</code> на клієнті, сам токен лишається дійсним до сплину терміну).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Роль</th><th>Може сьогодні (за наміром)</th><th>Ціль (Фаза 2+)</th></tr></thead>
+        <tbody>
+          <tr><td>shipper</td><td>Публікувати вантаж</td><td>+ бачити оферти, вести переговори, бачити trust-скор перевізника</td></tr>
+          <tr><td>carrier</td><td>Брати відкритий вантаж</td><td>+ AI-рекомендації, робити контрпропозиції, завантажувати POD</td></tr>
+          <tr><td>dispatcher (enterprise)</td><td>—</td><td>Керує кількома вантажівками/водіями від імені carrier-компанії</td></tr>
+          <tr><td>admin</td><td>—</td><td>Модерація, перегляд журналу аудиту, ручний review документів/скорингу</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Цільові покращення: <code>access_token</code> (15 хв) + <code>refresh_token</code> (httpOnly cookie, з ротацією), відкликання через deny-list у Redis, MFA для enterprise-акаунтів, SSO (OAuth2/OIDC) для великих shipper-клієнтів, окремі API-ключі з обмеженими scope для інтеграцій (TMS-конектори).</p>
+
+    <!-- 10 -->
+    <h2 id="s10"><span class="num">10</span>Безпека</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Область</th><th>Поточний стан</th><th>Ціль</th></tr></thead>
+        <tbody>
+          <tr><td>Секрети</td><td><code>JWT_SECRET</code> зі змінної середовища, дефолт <code>"dev-secret-change-me"</code> у коді</td><td>Секрет-менеджер (Vault/AWS Secrets Manager), без дефолтів у коді</td></tr>
+          <tr><td>CORS</td><td><code>allow_origins=["*"]</code>, всі методи/заголовки</td><td>Явний allowlist доменів продакшн-фронтенду</td></tr>
+          <tr><td>Rate limiting</td><td>Відсутній</td><td>На рівні API Gateway, окремо жорсткіше на <code>/auth/*</code></td></tr>
+          <tr><td>Авторизація на рівні ресурсу</td><td>Відсутня (розділ 17)</td><td>Перевірка власності (shipper бачить/редагує лише свої вантажі) на кожному mutating-ендпоінті</td></tr>
+          <tr><td>PII та документи</td><td>Н/З — документів ще немає</td><td>Шифрування в спокої (S3 SSE), маскування PII перед LLM-викликами (розділ 7.8)</td></tr>
+          <tr><td>Аудит</td><td>Відсутній</td><td><code>audit_log</code>: хто/що/коли, окремо — усі AI-повідомлення від імені платформи (розділ 7.1)</td></tr>
+          <tr><td>Залежності</td><td>Не скануються</td><td>Dependabot/<code>pip-audit</code> у CI, блокування критичних CVE</td></tr>
+          <tr><td>Пентест</td><td>Не проводився (демо-стадія)</td><td>Перед публічним запуском і раз на рік/після значних змін</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 11 -->
+    <h2 id="s11"><span class="num">11</span>Інфраструктура та DevOps</h2>
+    <p>Сьогодні: <code>docker-compose.yml</code> піднімає три контейнери — <code>db</code> (Postgres 16 з healthcheck), <code>backend</code> (FastAPI, ретраї підключення до БД при старті), <code>frontend</code> (Vite dev-сервер). Один хост, без окремих середовищ.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Середовище</th><th>Призначення</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>local</td><td>Розробка через <code>docker compose up</code></td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>staging</td><td>Перевірка перед релізом, синтетичні дані</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>production</td><td>Kubernetes, окремі node pool для Core і AI-воркерів (AI-воркери — з доступом до GPU/вищим CPU-лімітом і власним автоскейлінгом за чергою подій)</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>CI/CD (Фаза 2):</strong> GitHub Actions — лінт (ruff/eslint) → тести → білд Docker-образів → пуш у реєстр → деплой у staging автоматично, у production через ручне затвердження. <strong>Резервне копіювання:</strong> щоденний снапшот Postgres + point-in-time recovery до 7 днів; документи в обʼєктному сховищі — versioning увімкнено для захисту від випадкового перезапису.</p>
+
+    <!-- 12 -->
+    <h2 id="s12"><span class="num">12</span>Продуктивність і масштабованість</h2>
+    <ul>
+      <li><strong>Кешування.</strong> Redis для «гарячого» списку відкритих вантажів і результатів прогнозу ставки (TTL кілька хвилин — прогноз не повинен перераховуватись на кожен рендер списку).</li>
+      <li><strong>Асинхронні задачі.</strong> Важкі AI-виклики (переговори, OCR) йдуть через чергу (Celery/RQ поверх Redis, пізніше — Kafka), не в request-response циклі API.</li>
+      <li><strong>Індекси БД.</strong> <code>loads(status, created_at)</code> складений індекс для основного списку; <code>loads(origin, destination, equipment_type)</code> для матчингу; pgvector HNSW-індекс на <code>embedding</code>.</li>
+      <li><strong>Read-репліки.</strong> Читання списку вантажів і аналітики — з репліки, запис — лише на primary, коли навантаження це виправдає.</li>
+      <li><strong>CDN.</strong> Статика фронтенду й завантажені документи (через підписані URL) — за CDN, не проксуються бекендом.</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Метрика</th><th>Цільовий бюджет</th></tr></thead>
+        <tbody>
+          <tr><td>Список вантажів, p95</td><td class="num-col">&lt; 200 мс</td></tr>
+          <tr><td>Публікація вантажу, p95</td><td class="num-col">&lt; 300 мс</td></tr>
+          <tr><td>AI-матчинг (асинхронний), p95</td><td class="num-col">&lt; 3 с</td></tr>
+          <tr><td>Перший хід Negotiation Agent, p95</td><td class="num-col">&lt; 8 с</td></tr>
+          <tr><td>Доступність Core API</td><td class="num-col">99.9%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 13 -->
+    <h2 id="s13"><span class="num">13</span>Спостережуваність</h2>
+    <p>Сьогодні — лише stdout-логи <code>uvicorn</code>, нічого структурованого. Цільовий стек:</p>
+    <ul>
+      <li><strong>Логи</strong> — структуровані (JSON), з <code>request_id</code>, що проходить через Gateway → Core → подію → AI-сервіс, для наскрізного трасування одного запиту користувача.</li>
+      <li><strong>Метрики</strong> — Prometheus: латентність по ендпоінтах, довжина черги подій, вартість AI-викликів у доларах на добу.</li>
+      <li><strong>Трейсинг</strong> — OpenTelemetry, окремо позначені AI-спани (модель, кількість токенів, латентність провайдера).</li>
+      <li><strong>AI-специфічна спостережуваність:</strong> eval-пайплайн на semplе реальних кейсів після кожної зміни промпту/моделі; дрейф якості (частка ескалацій Negotiation Agent людині — раптове зростання сигналізує про регресію); черга людського review для документів і скорингу як явний UI, а не побічний ефект.</li>
+      <li><strong>Цикл зворотного зв'язку.</strong> Кожне ручне виправлення (диспетчер поправив офер AI, людина виправила поле документа) записується як приклад для наступного eval-набору й потенційного донавчання/промпт-тюнінгу.</li>
+    </ul>
+
+    <!-- 14 -->
+    <h2 id="s14"><span class="num">14</span>Зовнішні інтеграції</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Категорія</th><th>Навіщо</th><th>Використовується в</th></tr></thead>
+        <tbody>
+          <tr><td>Картографія / трафік</td><td>Відстань, час у дорозі, затори</td><td>ETA, Matching (порожній пробіг)</td></tr>
+          <tr><td>Погода</td><td>Коригування ETA, ризик затримки</td><td>ETA</td></tr>
+          <tr><td>ELD / телематика перевізника</td><td>Реальна GPS-позиція, HOS-ліміти водія</td><td>ETA, Trust</td></tr>
+          <tr><td>FMCSA / кредитні бюро</td><td>MC/DOT-верифікація, страхове покриття, історія претензій</td><td>Trust Scoring, онбординг компанії</td></tr>
+          <tr><td>e-Signature</td><td>Підписання rate confirmation без обміну PDF поштою</td><td>Document Intelligence, офери</td></tr>
+          <tr><td>Платежі / факторинг</td><td>Швидка оплата перевізнику після POD (майбутня монетизація)</td><td>Завершення вантажу</td></tr>
+          <tr><td>SMS / email провайдер</td><td>Сповіщення, канал для Negotiation Agent</td><td>Notification, Negotiation</td></tr>
+          <tr><td>DAT/Truckstop (публічні API, де доступно)</td><td>Холодний старт ринкових даних для Pricing до накопичення власної історії</td><td>Pricing Service</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 15 -->
+    <h2 id="s15"><span class="num">15</span>Тестування та якість</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Рівень</th><th>Інструмент</th><th>Що покриває</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>Unit (бекенд)</td><td>pytest</td><td>Схеми, бізнес-правила (напр. переходи статусу вантажу)</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>Unit (фронтенд)</td><td>Vitest + Testing Library</td><td>Компоненти, <code>AuthContext</code></td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>Інтеграційні</td><td>pytest + тестовий Postgres у Docker</td><td>Ендпоінти API наскрізь через БД</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>E2E</td><td>Playwright</td><td>Реєстрація → публікація → взяття вантажу</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+          <tr><td>AI-eval</td><td>Власний харнес поверх зафіксованого набору кейсів</td><td>Якість Negotiation/Matching/Trust — регресія перед кожним релізом промпту чи моделі</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Навантажувальні</td><td>k6/Locust</td><td>Латентність під пік-навантаженням, черга подій під бекпресурою</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Сьогодні тестів немає — жодного файлу під <code>backend/tests</code> чи <code>frontend/src/**/*.test.*</code>. Перший приорітет Фази 2: покрити перехід статусів вантажу (<code>open→accepted→completed</code>) і авторизацію ендпоінтів, оскільки саме там зараз відомий розрив (розділ 17).</p>
+
+    <!-- 16 -->
+    <h2 id="s16"><span class="num">16</span>Технічна дорожня карта</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Фаза</th><th>Технічна ціль</th><th>AI-фічі, що вмикаються</th></tr></thead>
+        <tbody>
+          <tr><td><b>MVP</b> <span class="pill pill--done">готово</span></td><td>Транзакційний каркас: auth, вантажі, статуси</td><td>—</td></tr>
+          <tr><td><b>Фаза 2</b> <span class="pill pill--wip">3–4 міс</span></td><td>Авторизація на рівні ресурсу, тести, CI, черга задач, обʼєктне сховище, pgvector</td><td>Розумний підбір вантажу, пошук природною мовою (базова версія)</td></tr>
+          <tr><td><b>Фаза 3</b> <span class="pill pill--planned">5–9 міс</span></td><td>Kubernetes, шина подій, спостережуваність, мобільний застосунок</td><td>Прогноз ставки, скоринг надійності, автоматизація документів, ETA</td></tr>
+          <tr><td><b>Фаза 4</b> <span class="pill pill--research">R&amp;D</span></td><td>Multi-region, SSO для enterprise, платіжний рейл</td><td>AI-асистент переговорів (найризикованіша фіча — останньою, після довіри користувачів до простіших AI-функцій)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Порядок навмисний: Negotiation Agent — найцінніша, але й найризикованіша фіча (модель говорить від імені платформи з реальними грошима на кону). Вона йде останньою, коли інфраструктура guardrails, аудиту й ескалації (розділ 7.1, 13) вже перевірена на менш ризикованих AI-функціях.</p>
+
+    <!-- 17 -->
+    <h2 id="s17"><span class="num">17</span>Технічний борг і відомі обмеження</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Проблема</th><th>Вплив</th><th>Пріоритет</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> не перевіряють автентифікацію чи роль, попри те що README це обіцяє</td><td>Будь-хто без токена може публікувати/забирати/закривати вантажі</td><td><span class="pill pill--risk">P0</span></td></tr>
+          <tr><td>2</td><td><code>loads.shipper_name</code>/<code>carrier_name</code> — вільний текст, не FK на <code>users</code></td><td>Неможливо перевірити власність вантажу; дані легко підробити</td><td><span class="pill pill--risk">P0</span></td></tr>
+          <tr><td>3</td><td>JWT без refresh і без відкликання, дефолтний секрет у коді</td><td>Вкрадений токен дійсний до 7 днів; ризик при випадковому деплої з дефолтним <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>5</td><td>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</td><td>Немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Немає тестів (бекенд і фронтенд)</td><td>Регресії не ловляться до продакшну</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>7</td><td>Немає rate limiting на <code>/api/auth/*</code></td><td>Вразливість до brute-force підбору пароля</td><td><span class="pill pill--risk">P2</span></td></tr>
+          <tr><td>8</td><td>AI-сервіси — поки що специфікація, не код</td><td>Основна цінність продукту для інвестора ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Пункти 1–2 — перше, що варто закрити перед будь-яким публічним доступом до демо, навіть до початку роботи над AI: без FK-звʼязку вантажу з власником неможливо коректно побудувати ані trust scoring, ані персоналізований matching, ані журнал переговорів — вся AI-підсистема з розділу 7 неявно покладається на те, що це буде виправлено в Фазі 2.</p>
+
+    <footer class="doc-footer">
+      <span>AI Loadboard · Технічна документація v0.1</span>
+      <span>15.08.2026</span>
+    </footer>
+
+  </main>
+</div>
+
+<div class="shell" data-lang="en">
+
+  <aside class="toc">
+    <div class="brand"><b>AI Loadboard</b>Technical Documentation · v0.1</div>
+    <nav>
+      <ol>
+        <li><a href="#s1-en">About this document</a></li>
+        <li><a href="#s2-en">Overview &amp; maturity</a></li>
+        <li><a href="#s3-en">Architecture</a></li>
+        <li><a href="#s4-en">Technology stack</a></li>
+        <li><a href="#s5-en">Data domain model</a></li>
+        <li><a href="#s6-en">Backend services</a></li>
+        <li><a href="#s7-en">AI/ML subsystem</a></li>
+        <li><a href="#s8-en">API</a></li>
+        <li><a href="#s9-en">Auth &amp; roles</a></li>
+        <li><a href="#s10-en">Security</a></li>
+        <li><a href="#s11-en">Infrastructure &amp; DevOps</a></li>
+        <li><a href="#s12-en">Performance &amp; scale</a></li>
+        <li><a href="#s13-en">Observability</a></li>
+        <li><a href="#s14-en">External integrations</a></li>
+        <li><a href="#s15-en">Testing &amp; quality</a></li>
+        <li><a href="#s16-en">Technical roadmap</a></li>
+        <li><a href="#s17-en">Debt &amp; limitations</a></li>
+      </ol>
+    </nav>
+    <div class="legend">
+      <span class="pill pill--done">MVP · done</span>
+      <span class="pill pill--wip">Phase 2</span>
+      <span class="pill pill--planned">Phase 3</span>
+      <span class="pill pill--research">R&amp;D</span>
+      <span class="pill pill--risk">Risk</span>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="cover">
+      <div class="kicker">Engineering specification · internal document</div>
+      <h1>AI Loadboard — technical documentation</h1>
+      <p class="subtitle">System architecture, data model, AI subsystem, and engineering decisions — from what's already running to what's designed for scale.</p>
+      <div class="meta-row">
+        <span>Document version <b>0.1</b></span>
+        <span>Date <b>2026-08-15</b></span>
+        <span>Product status <b>MVP / demo</b></span>
+        <span>Related document <b>Project Overview (for investors)</b></span>
+      </div>
+    </div>
+
+    <!-- 1 -->
+    <h2 id="s1-en"><span class="num">01</span>About this document</h2>
+    <p>This is the technical specification for AI Loadboard — a freight marketplace that connects shippers and carriers directly, with no broker in between. Unlike the investor overview (<code>project-documentation.html</code>), there's no marketing simplification here: the document describes the system the way the engineering team sees it — including what hasn't been built yet.</p>
+    <p>Audience: technical co-founders, future engineers joining the team, and investor-side technical due diligence.</p>
+    <p>Every section and every table row carries a maturity label:</p>
+    <p>
+      <span class="pill pill--done">MVP · done</span> — implemented and running in the current demo scaffold·
+      <span class="pill pill--wip">Phase 2</span> — next up in the development sprint·
+      <span class="pill pill--planned">Phase 3</span> — planned, design not yet frozen·
+      <span class="pill pill--research">R&amp;D</span> — needs research/prototyping before it's committed to the product·
+      <span class="pill pill--risk">Risk</span> — known technical debt or an open question.
+    </p>
+    <p>The document deliberately doesn't hide the immaturity of the current codebase: the MVP is an intentionally minimal transactional scaffold (sign up → post a load → take a load → complete it), with zero AI features, built to validate the core shipper↔carrier loop before investing in the ML layer.</p>
+
+    <!-- 2 -->
+    <h2 id="s2-en"><span class="num">02</span>Overview &amp; maturity</h2>
+    <p>AI Loadboard is a two-sided platform: a shipper posts a load, a carrier sees it and takes it directly — no broker. The long-term vision isn't just a bulletin board — it's a system where AI does the work of a dispatcher and a broker: matching loads, forecasting rates, running the first round of negotiation, vetting counterparties, and processing documents.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Current state (MVP)</th><th>Target state</th></tr></thead>
+        <tbody>
+          <tr><td>Client</td><td>React SPA, single screen, manual <code>fetch</code></td><td>React SPA + mobile app (React Native), query caching, realtime via WebSocket</td></tr>
+          <tr><td>Backend</td><td>One monolithic FastAPI service</td><td>Core service + eight AI services, decoupled via an event bus</td></tr>
+          <tr><td>Database</td><td>One PostgreSQL, 2 tables (<code>users</code>, <code>loads</code>)</td><td>PostgreSQL (OLTP) + pgvector/vector store + Redis (cache/queues) + object storage for documents</td></tr>
+          <tr><td>Authentication</td><td>Email + password, JWT with no refresh</td><td>JWT + refresh tokens, MFA, SSO for enterprise accounts</td></tr>
+          <tr><td>Load matching</td><td>Linear list, sorted by date</td><td>ML ranking tuned to carrier profile</td></tr>
+          <tr><td>AI features</td><td>None</td><td>7 AI services (section 7)</td></tr>
+          <tr><td>Infrastructure</td><td>Docker Compose, single host</td><td>Kubernetes, multiple environments, autoscaling</td></tr>
+          <tr><td>Observability</td><td>None — just <code>uvicorn</code> logs to stdout</td><td>Metrics, tracing, structured logs, alerting, AI-eval pipelines</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <strong>A deliberate choice, not an oversight.</strong> AI isn't bolted onto a finished bulletin board — the entire architecture below is designed so AI services plug in as separate, independently deployable event consumers, not as calls inside a monolithic controller. This is the project's central architectural bet.
+    </div>
+
+    <!-- 3 -->
+    <h2 id="s3-en"><span class="num">03</span>Top-level architecture</h2>
+    <p>The system splits into two halves with different reliability and latency requirements. The <strong>Core Loadboard Service</strong> is the transactional core (accounts, loads, statuses, payments down the line): it has to be fast, consistent, and held to strict SLAs. The <strong>AI services</strong> are compute-heavy, depend on external LLM/ML providers, may take seconds to respond, and must never block the transactional path. That's why they're connected asynchronously through an event bus rather than direct synchronous calls.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 860 610" role="img" aria-label="The client calls the API Gateway, which forwards to the Core service; the Core service writes to PostgreSQL and publishes an event to the event bus; AI services consume events from the bus asynchronously, use shared AI infrastructure and external APIs, and return their result through the bus, which reaches the client via WebSocket or polling.">
+        <defs>
+          <marker id="arrow-en" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="270" y="18" width="320" height="46" rx="7"></rect>
+        </g>
+        <text x="430" y="46" text-anchor="middle" font-size="13" fill="currentColor">Web client · React / TypeScript</text>
+
+        <line x1="430" y1="64" x2="430" y2="96" marker-end="url(#arrow-en)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="444" y="84" font-size="10.5" fill="currentColor">HTTPS · REST</text>
+
+        <rect x="230" y="98" width="400" height="46" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="430" y="126" text-anchor="middle" font-size="13" fill="currentColor">API Gateway / BFF — auth · rate-limit · routing</text>
+
+        <line x1="430" y1="144" x2="430" y2="176" marker-end="url(#arrow-en)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <rect x="130" y="178" width="300" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="280" y="200" text-anchor="middle" font-size="13" fill="currentColor">Core Loadboard Service</text>
+        <text x="280" y="217" text-anchor="middle" font-size="10.5" fill="currentColor">FastAPI · today the only service actually built</text>
+
+        <rect x="470" y="178" width="220" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="580" y="200" text-anchor="middle" font-size="13" fill="currentColor">PostgreSQL</text>
+        <text x="580" y="217" text-anchor="middle" font-size="10.5" fill="currentColor">OLTP · source of truth</text>
+
+        <line x1="430" y1="204" x2="470" y2="204" marker-end="url(#arrow-en)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="405" y="196" font-size="9.5" text-anchor="middle" fill="currentColor">reads/writes</text>
+
+        <line x1="280" y1="230" x2="280" y2="262" marker-end="url(#arrow-en)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="294" y="250" font-size="10.5" fill="currentColor">publishes event</text>
+
+        <rect x="130" y="264" width="500" height="42" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="380" y="290" text-anchor="middle" font-size="12" fill="currentColor" font-family="ui-monospace, monospace">event bus · load.created / offer.made / doc.uploaded</text>
+
+        <line x1="380" y1="306" x2="380" y2="338" marker-end="url(#arrow-en)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="394" y="326" font-size="10.5" fill="currentColor">async call</text>
+
+        <rect x="170" y="340" width="480" height="66" rx="8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 3"></rect>
+        <text x="410" y="365" text-anchor="middle" font-size="13" fill="currentColor" class="diagram-accent" font-weight="600">AI services (7)</text>
+        <text x="410" y="384" text-anchor="middle" font-size="10.3" fill="currentColor">Matching · Pricing · Negotiation · Trust · Document Intel. · NL Search · ETA</text>
+
+        <line x1="300" y1="406" x2="255" y2="448" marker-end="url(#arrow-en)" stroke="currentColor" stroke-width="1.4"></line>
+        <line x1="520" y1="406" x2="585" y2="448" marker-end="url(#arrow-en)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <rect x="110" y="450" width="290" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="255" y="474" text-anchor="middle" font-size="12.5" fill="currentColor">Shared AI infrastructure</text>
+        <text x="255" y="492" text-anchor="middle" font-size="10.3" fill="currentColor">Vector DB · LLM Gateway · Feature Store</text>
+
+        <rect x="440" y="450" width="290" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="585" y="474" text-anchor="middle" font-size="12.5" fill="currentColor">External APIs</text>
+        <text x="585" y="492" text-anchor="middle" font-size="10.3" fill="currentColor">Maps/Traffic · Weather · ELD · Credit bureaus · e-Sign</text>
+
+        <path d="M 650 373 L 780 373 L 780 41 L 594 41" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow-en)"></path>
+        <text x="783" y="200" font-size="10.3" fill="currentColor" transform="rotate(90 783 200)" text-anchor="middle">result: WS push / polling</text>
+
+        <text x="16" y="580" font-size="10.3" fill="currentColor" opacity=".75">Legend: solid line — synchronous request; dashed — asynchronous result returned to the client.</text>
+      </svg>
+      <figcaption>Fig. 1 — The transactional core and the AI services are decoupled by an event bus: Core writes to Postgres and publishes an event, AI services consume it asynchronously and return the result to the client on a separate channel (WS/polling), without blocking the main request.</figcaption>
+    </figure>
+
+    <p>Right now only the rectangle <strong>Core Loadboard Service ↔ PostgreSQL</strong> in the top half of the diagram is actually built — no API Gateway, no event bus, no AI service at all. Everything else is the target architecture the data model (section 5) and event contracts are already being designed around.</p>
+
+    <h3>Why an event bus instead of direct calls</h3>
+    <ul>
+      <li><strong>Failure isolation.</strong> If an LLM provider degrades or goes down, posting and taking loads keep working — they're separate failure domains.</li>
+      <li><strong>Independent scaling and deploys.</strong> The Negotiation Agent can ship separately from Core, with its own worker pool and GPU/API budget, without touching transactional code.</li>
+      <li><strong>Swapping models without core downtime.</strong> An LLM provider or scoring algorithm can be changed by pointing a new consumer version at the same event.</li>
+      <li><strong>Audit by default.</strong> Every event is a journal entry — who proposed what and when — which matters for disputes over what the AI "promised" a counterparty.</li>
+    </ul>
+
+    <!-- 4 -->
+    <h2 id="s4-en"><span class="num">04</span>Technology stack</h2>
+
+    <h3>Client</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Technology</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>React 18 + TypeScript</td><td>SPA, component UI</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Vite</td><td>Dev server and build</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Manual <code>fetch</code> + React Context</td><td>API access and auth state (<code>AuthContext.tsx</code>)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>TanStack Query</td><td>Request caching, retries, invalidation</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>WebSocket client</td><td>Realtime load-status updates, AI agent offers</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>React Native</td><td>Mobile app for carriers (notifications, GPS)</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Backend &amp; data</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Technology</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Python 3.12 + FastAPI</td><td>REST API, validation via Pydantic</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>SQLAlchemy 2.x</td><td>ORM, declarative models</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>PostgreSQL 16</td><td>Primary store (OLTP)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>python-jose + passlib/bcrypt</td><td>JWT, password hashing</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Redis</td><td>Session cache, rate-limit counters, task queue (Celery/RQ broker)</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>pgvector (Postgres extension)</td><td>Vector search for NL queries and matching — starting without a separate vector store</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>Kafka / Redis Streams</td><td>Event bus between Core and the AI services</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+          <tr><td>S3-compatible object storage</td><td>Document storage (BOL/POD/rate confirmation)</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>Alembic</td><td>DB schema migrations (instead of <code>create_all</code> at startup)</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>AI / ML</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Technology</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>LLM Gateway (a LiteLLM-style layer)</td><td>Single call point for models across providers, with fallback and a cost meter</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Claude / GPT-class models (function calling)</td><td>Negotiation Agent, NL Search, document structuring</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Sentence-embedding model (e.g. the <code>bge</code>/<code>e5</code> class)</td><td>Vectorizing loads and queries for matching and search</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Gradient boosting (LightGBM/XGBoost)</td><td>Market rate forecast, ETA, trust scoring — tabular data, where explainability matters more than deep nets</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>OCR + layout model (e.g. the LayoutLM/Textract class)</td><td>Reading BOL/POD/rate confirmation</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>MLflow / model registry</td><td>Model versioning, reproducibility</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Infrastructure &amp; observability</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Technology</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Docker + Docker Compose</td><td>Local three-container run (db/backend/frontend)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Kubernetes (managed — EKS/GKE)</td><td>Production orchestration, autoscaling AI workers separately from Core</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+          <tr><td>GitHub Actions</td><td>CI: lint, tests, image builds, deploy</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>Terraform</td><td>Infrastructure as code (network, DB, cluster)</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+          <tr><td>OpenTelemetry + Prometheus/Grafana</td><td>End-to-end latency metrics and tracing, including AI calls</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+          <tr><td>Sentry</td><td>Frontend and backend error tracking</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 5 -->
+    <h2 id="s5-en"><span class="num">05</span>Data domain model</h2>
+    <p>The current schema is two tables, deliberately minimal for the MVP:</p>
+    <pre><code>-- backend/app/models.py — what actually exists today
+
+users(id, email UNIQUE, hashed_password, company_name, role ENUM(shipper|carrier), created_at)
+
+loads(id, title, origin, destination, equipment_type DEFAULT 'Dry Van',
+      weight_lbs, price_usd NUMERIC(10,2), shipper_name, carrier_name NULLABLE,
+      status ENUM(open|accepted|completed), created_at)</code></pre>
+
+    <div class="note risk">
+      <strong>A notable gap right now:</strong> <code>loads.shipper_name</code> and <code>carrier_name</code> are free-text fields, not foreign keys into <code>users</code>. A load isn't technically tied to the authenticated user who posted or took it. That's fine for a demo, but it's the first thing that changes in Phase 2 — <code>shipper_id</code>/<code>carrier_id</code> as FKs with ownership checks at the API layer. Details in section 17.
+    </div>
+
+    <h3>Target schema (Phase 2–3)</h3>
+    <p>The extension adds companies (for trust scoring and MC/DOT numbers), offers and negotiation history, documents with extraction results, and market-rate forecast snapshots:</p>
+    <pre><code>CREATE TABLE companies (
+  id            BIGSERIAL PRIMARY KEY,
+  legal_name    TEXT NOT NULL,
+  mc_number     TEXT UNIQUE,      -- Motor Carrier number
+  dot_number    TEXT UNIQUE,
+  trust_score   NUMERIC(4,1),     -- cached latest score, 0–100
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE offers (
+  id            BIGSERIAL PRIMARY KEY,
+  load_id       BIGINT REFERENCES loads(id),
+  carrier_id    BIGINT REFERENCES users(id),
+  price_usd     NUMERIC(10,2) NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending', -- pending|countered|accepted|rejected|expired
+  source        TEXT NOT NULL DEFAULT 'human',   -- human|ai_agent
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE negotiation_messages (
+  id              BIGSERIAL PRIMARY KEY,
+  offer_id        BIGINT REFERENCES offers(id),
+  sender          TEXT NOT NULL,   -- shipper|carrier|ai_agent
+  channel         TEXT NOT NULL,   -- chat|email|sms|voice_transcript
+  body            TEXT NOT NULL,
+  proposed_price  NUMERIC(10,2),
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE trust_scores (
+  company_id      BIGINT REFERENCES companies(id),
+  score           NUMERIC(4,1) NOT NULL,   -- 0–100
+  factors         JSONB NOT NULL,          -- {"payment_history":.., "insurance_valid":.., "doc_fraud_flags":..}
+  model_version   TEXT NOT NULL,
+  computed_at     TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (company_id, computed_at)
+);
+
+CREATE TABLE market_rate_snapshots (
+  lane            TEXT NOT NULL,   -- e.g. 'DAL-HOU'
+  equipment_type  TEXT NOT NULL,
+  predicted_at    TIMESTAMPTZ NOT NULL,
+  horizon_days    INT NOT NULL,
+  predicted_usd   NUMERIC(10,2) NOT NULL,
+  confidence_low  NUMERIC(10,2),
+  confidence_high NUMERIC(10,2),
+  model_version   TEXT NOT NULL
+);
+
+CREATE TABLE documents (
+  id              BIGSERIAL PRIMARY KEY,
+  load_id         BIGINT REFERENCES loads(id),
+  doc_type        TEXT NOT NULL,   -- bol|pod|rate_confirmation|insurance_coi
+  storage_uri     TEXT NOT NULL,   -- s3://...
+  extraction      JSONB,           -- structured fields from the IDP pipeline
+  confidence      NUMERIC(4,3),
+  review_status   TEXT NOT NULL DEFAULT 'auto', -- auto|needs_review|reviewed
+  created_at      TIMESTAMPTZ DEFAULT now()
+);</code></pre>
+    <p><code>loads.embedding vector(768)</code> is added as a pgvector column for semantic search and matching (sections 7.3/7.6) — no separate vector database is needed until load volume calls for ANN indexes outside Postgres.</p>
+
+    <!-- 6 -->
+    <h2 id="s6-en"><span class="num">06</span>Backend services</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Service</th><th>Responsibility</th><th>Key tech</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Core Loadboard Service</td><td>Users, loads, statuses, offers, payments (future)</td><td>FastAPI + Postgres</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>Matching Service</td><td>Ranking open loads against a carrier's profile and history</td><td>pgvector + gradient-boosted ranking</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Pricing Service</td><td>Forecasting the market rate on a lane N days out</td><td>LightGBM / time series, snapshots in <code>market_rate_snapshots</code></td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Negotiation Service</td><td>LLM agent that runs the first round of contact and bargains within set bounds</td><td>LLM function calling + guardrails (section 7.1)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Trust Service</td><td>Counterparty trust scoring, double-brokerage flags</td><td>Tabular classifier + external checks (FMCSA, insurance)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Document Intelligence Service</td><td>OCR and structuring of BOL/POD/rate confirmation</td><td>OCR + layout model + LLM extraction (section 7.2)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Search Service</td><td>Natural-language load search</td><td>LLM parsing → structured filter + vector search</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>ETA Service</td><td>Arrival-time estimate accounting for traffic/weather/HOS</td><td>Regression + telematics/traffic API</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Notification Service</td><td>Push/email/SMS for load status changes, new offers</td><td>WebSocket + task queue</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Every AI service is a separate deployment that reads from the shared event bus and writes its result back to Postgres through its own narrow API contract (none has direct access to another service's tables). This is deliberately closer to a modular monolith with clear boundaries than to "microservices for their own sake" — a team of 2–5 engineers can't run 9 independent repos; the boundaries are drawn so they can be physically split apart later without rewriting domain logic.</p>
+
+    <!-- 7 -->
+    <h2 id="s7-en"><span class="num">07</span>AI/ML subsystem</h2>
+    <p>Seven product-facing AI features on shared infrastructure. The common principle across all of them: <strong>a model is never a single point of failure</strong> — every service has a deterministic fallback (an empty recommendation list, the last known rate, escalation to a human), and no AI call blocks the core transactional path (section 3).</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Feature</th><th>Approach</th><th>Key data</th><th>Human in the loop</th></tr></thead>
+        <tbody>
+          <tr><td>Smart load matching</td><td>Ranking (embeddings + gradient boosting)</td><td>Route, deadhead miles, history of accepted loads</td><td>No — ranking only, the carrier picks</td></tr>
+          <tr><td>Market rate forecast</td><td>Time series / gradient boosting</td><td>Historical lane rates, fuel, seasonality, supply/demand</td><td>No — confidence interval shown explicitly</td></tr>
+          <tr><td>AI negotiation assistant</td><td>LLM agent with function calling</td><td>Price bounds from the shipper, lane history, counterparty messages</td><td>Yes — escalation outside trusted bounds (section 7.1)</td></tr>
+          <tr><td>Trust scoring</td><td>Tabular classifier + rules</td><td>Payment history, FMCSA data, insurance documents, fraud flags</td><td>Yes — a low score blocks auto-matching, needs manual review</td></tr>
+          <tr><td>Document automation</td><td>OCR + LLM extraction</td><td>Scanned/photographed BOL, POD, rate confirmation</td><td>Yes — below the confidence threshold (section 7.2)</td></tr>
+          <tr><td>Natural-language search</td><td>LLM parsing → filter + vector search</td><td>Free-text user query</td><td>No — deterministic fallback to the filter form</td></tr>
+          <tr><td>ETA forecast</td><td>Regression on telematics/traffic</td><td>Carrier GPS, traffic, weather, driver HOS limits</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7.1 AI negotiation assistant</h3>
+    <p>The product's riskiest feature: the model conducts real communication on the platform's behalf and can effectively "promise" a price. That's why it's the only AI service with a hard safety perimeter, not just an LLM call.</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 660 420" role="img" aria-label="A message from the counterparty reaches the Negotiation Agent, which checks against the guardrails panel and the price bounds; if the offer is within bounds, the agent automatically sends a counter-offer and the counterparty may reply with a new round; if it is out of bounds or the model is uncertain, the request is escalated to a human dispatcher.">
+        <defs>
+          <marker id="arrow2-en" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+
+        <rect x="30" y="18" width="270" height="50" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="165" y="40" text-anchor="middle" font-size="12.5" fill="currentColor">Message from counterparty</text>
+        <text x="165" y="57" text-anchor="middle" font-size="10" fill="currentColor">(chat / email / SMS)</text>
+
+        <line x1="165" y1="68" x2="165" y2="98" marker-end="url(#arrow2-en)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <rect x="30" y="100" width="270" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="165" y="122" text-anchor="middle" font-size="12.5" fill="currentColor">Negotiation Agent (LLM)</text>
+        <text x="165" y="139" text-anchor="middle" font-size="9.5" font-family="ui-monospace, monospace" fill="currentColor">get_market_rate() · check_bounds()</text>
+
+        <line x1="300" y1="126" x2="338" y2="126" marker-end="url(#arrow2-en)" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"></line>
+        <text x="319" y="116" font-size="9" text-anchor="middle" fill="currentColor">checks against</text>
+
+        <rect x="340" y="18" width="300" height="150" rx="8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3"></rect>
+        <text x="490" y="38" text-anchor="middle" font-size="12" fill="currentColor" class="diagram-accent" font-weight="600">Guardrails</text>
+        <text x="354" y="58" font-size="10" fill="currentColor">· hard price bounds (min/max) set by the shipper</text>
+        <text x="354" y="74" font-size="10" fill="currentColor">· max 3 automatic counter-rounds</text>
+        <text x="354" y="90" font-size="10" fill="currentColor">· off-limit topics: guarantees, personal data</text>
+        <text x="354" y="106" font-size="10" fill="currentColor">· every message is logged for audit</text>
+        <text x="354" y="122" font-size="10" fill="currentColor">· model uncertainty → escalate by default</text>
+        <text x="354" y="138" font-size="10" fill="currentColor">· no direct access to counterparty personal</text>
+        <text x="354" y="154" font-size="10" fill="currentColor">  data beyond the fields actually needed</text>
+
+        <line x1="165" y1="152" x2="165" y2="182" marker-end="url(#arrow2-en)" stroke="currentColor" stroke-width="1.4"></line>
+
+        <polygon points="165,182 260,224 165,266 70,224" fill="none" stroke="currentColor" stroke-width="1.4"></polygon>
+        <text x="165" y="220" text-anchor="middle" font-size="10.5" fill="currentColor">within the bounds</text>
+        <text x="165" y="233" text-anchor="middle" font-size="10.5" fill="currentColor">the shipper set?</text>
+
+        <line x1="260" y1="224" x2="338" y2="224" marker-end="url(#arrow2-en)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="299" y="214" font-size="10" text-anchor="middle" fill="currentColor">yes</text>
+
+        <rect x="340" y="198" width="300" height="54" rx="7" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+        <text x="490" y="221" text-anchor="middle" font-size="12" fill="currentColor">Auto counter-offer is sent</text>
+        <text x="490" y="238" text-anchor="middle" font-size="9.5" fill="currentColor">offer.status = countered</text>
+
+        <line x1="165" y1="266" x2="165" y2="296" marker-end="url(#arrow2-en)" stroke="currentColor" stroke-width="1.4"></line>
+        <text x="178" y="284" font-size="10" fill="currentColor">no / uncertain</text>
+
+        <rect x="30" y="298" width="270" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.4" class="diagram-critical"></rect>
+        <text x="165" y="320" text-anchor="middle" font-size="12" fill="currentColor">Escalate to a human dispatcher</text>
+        <text x="165" y="337" text-anchor="middle" font-size="9.5" fill="currentColor">offer.status = needs_human</text>
+
+        <path d="M 490 252 L 490 386 L 15 386 L 15 43 L 30 43" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrow2-en)"></path>
+        <text x="252" y="377" text-anchor="middle" font-size="9.5" fill="currentColor">new round, if the counterparty replies</text>
+      </svg>
+      <figcaption>Fig. 2 — The agent only proposes a price within the bounds the shipper set in advance; going outside those bounds, or model uncertainty, always leads to escalating to a human — never to the AI "guessing."</figcaption>
+    </figure>
+
+    <p><strong>Why it works this way:</strong> an LLM, by construction, doesn't guarantee it will respect numeric bounds just because a prompt tells it to — so bound-checking is pulled out into deterministic code (<code>check_bounds()</code>) rather than trusted to the model. The agent can shape wording and tone, but it can't get around the hardcoded amount check.</p>
+
+    <h3>7.2 Document automation</h3>
+    <p>The recognition pipeline for BOL/POD/rate confirmation: <code>upload → OCR/layout → LLM structuring into JSON → confidence check → auto-file or manual-review queue</code>. The <code>confidence</code> field on the <code>documents</code> table (section 5) is the minimum confidence across required fields (amount, date, signature/load number); below the threshold (e.g. 0.90) the document goes into the manual-review queue instead of being applied automatically. Every manual correction is logged as a training example for fine-tuning/prompt tuning — the feedback loop is described in section 13.
+
+    <h3>7.3–7.7 Other AI services — design principles</h3>
+    <div class="cards">
+      <div class="card">
+        <h5>Matching (7.3)</h5>
+        <p>Load embeddings (route, equipment type, weight, timing) + carrier profile (home base, preferred lanes, accept/decline history) → cosine similarity as the base signal, with gradient boosting on top to calibrate against actual acceptance conversion.</p>
+      </div>
+      <div class="card">
+        <h5>Pricing (7.4)</h5>
+        <p>Forecast at the lane level (origin-dest-equipment), 1–7 day horizon, with a confidence interval rather than a point number — the platform shows its uncertainty explicitly instead of passing it off as fact.</p>
+      </div>
+      <div class="card">
+        <h5>Trust Scoring (7.5)</h5>
+        <p>0–100 with explained factors (JSONB <code>factors</code>), not a black box — the carrier/shipper can see why the score is what it is, and can dispute it. A low score doesn't auto-ban; it lowers matching priority and adds a warning.</p>
+      </div>
+      <div class="card">
+        <h5>NL Search (7.6)</h5>
+        <p>The LLM turns a free-text query ("reefer out of Dallas this week under 900") into a structured filter plus an optional vector search by semantic closeness; there's always a deterministic fallback to the filter form if parsing is uncertain.</p>
+      </div>
+      <div class="card">
+        <h5>ETA (7.7)</h5>
+        <p>Regression on top of the carrier's GPS telematics (where available), traffic, weather, and remaining drive-time (HOS) — accuracy degrades transparently (a wider interval) when telematics isn't available, rather than silently.</p>
+      </div>
+      <div class="card">
+        <h5>Common to all</h5>
+        <p>Every model carries a version (<code>model_version</code>), logs input/output for offline evaluation, and has a documented fallback to deterministic behavior on failure.</p>
+      </div>
+    </div>
+
+    <h3>7.8 Shared AI infrastructure</h3>
+    <ul>
+      <li><strong>LLM Gateway</strong> — a single call point for models: abstracts the provider (swap models without changing service code), meters token cost per request, applies timeouts, and falls back to a smaller/cheaper model if the primary provider fails.</li>
+      <li><strong>PII redaction before outbound calls.</strong> Driver personal data and counterparty contact details are masked before the text goes to a third-party LLM provider, and restored after the response — a requirement for document flows carrying driver names and phone numbers.</li>
+      <li><strong>Prompt registry and eval sets.</strong> Every prompt is versioned; a prompt change is run against a fixed set of real cases (a regression suite for AI, not just for code) before it ships.</li>
+      <li><strong>Canary model rollout.</strong> A new model/prompt version first gets a small slice of traffic, is compared on quality and cost metrics, and only then is scaled to 100%.</li>
+      <li><strong>Cost budget and circuit breaker.</strong> A spend cap on AI calls per period; going over it degrades to cheaper/deterministic paths instead of silently running up the bill.</li>
+      <li><strong>Feature Store.</strong> Shared features (lane history, carrier behavior) are computed once and reused by Matching, Pricing, and Trust instead of duplicating the logic.</li>
+    </ul>
+
+    <!-- 8 -->
+    <h2 id="s8-en"><span class="num">08</span>API</h2>
+    <h3>Conventions</h3>
+    <ul>
+      <li>Base path <code>/api</code>, JSON request/response bodies, errors as <code>{"detail": "..."}</code> (FastAPI/Pydantic's standard shape).</li>
+      <li>Authentication — an <code>Authorization: Bearer &lt;JWT&gt;</code> header.</li>
+      <li>The public spec is auto-generated by FastAPI: <code>/docs</code> (Swagger UI) and <code>/openapi.json</code>.</li>
+      <li>Planned for Phase 2: path versioning (<code>/api/v1/...</code>), cursor pagination (<code>?cursor=</code>) for lists, idempotency keys for <code>POST /offers</code>.</li>
+    </ul>
+
+    <h3>Endpoints shipped today (MVP)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Liveness check</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Sign up (email, password, company, role)</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Log in, issues a JWT valid 7 days</td><td>—</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Current user from the token</td><td>Bearer</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>List loads, optional <code>?status=</code> filter</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Post a load</td><td>— <span class="pill pill--risk">should require Bearer</span></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Take a load directly</td><td>— <span class="pill pill--risk">should require Bearer</span></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Mark completed</td><td>— <span class="pill pill--risk">should require Bearer</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note risk"><strong>Mismatch with the README:</strong> the public demo description says "only available to authenticated shipper/carrier accounts," but in the code (<code>main.py</code>) these three routes have no <code>Depends(get_current_user)</code> and don't check role — today anyone can call them without a token. This is the first item in section 17.</div>
+
+    <h3>Planned endpoints (Phase 2–3)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/matches</code></td><td>AI load recommendations for a carrier's profile</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Natural-language load search</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/rates/forecast</code></td><td>Rate forecast by lane/equipment/date</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/offers</code></td><td>Create an offer (human or AI agent)</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Counter-offer</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/companies/{id}/trust-score</code></td><td>Trust score with explained factors</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/documents</code></td><td>Upload BOL/POD/rate confirmation</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/eta</code></td><td>Arrival time estimate</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Refresh the access token</td></tr>
+          <tr><td><code>WS</code></td><td><code>/ws/notifications</code></td><td>Realtime notifications: new offers, status changes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 9 -->
+    <h2 id="s9-en"><span class="num">09</span>Authentication, authorization &amp; roles</h2>
+    <p>Today: email+password → <code>bcrypt</code> hash → JWT (HS256, <code>sub</code>=email, 7-day expiry) via <code>python-jose</code>, no refresh token and no revocation (logging out just deletes the token from <code>localStorage</code> on the client — the token itself stays valid until it expires).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Role</th><th>Can do today (by design intent)</th><th>Target (Phase 2+)</th></tr></thead>
+        <tbody>
+          <tr><td>shipper</td><td>Post a load</td><td>+ see offers, negotiate, see the carrier's trust score</td></tr>
+          <tr><td>carrier</td><td>Take an open load</td><td>+ AI recommendations, counter-offer, upload POD</td></tr>
+          <tr><td>dispatcher (enterprise)</td><td>—</td><td>Manages multiple trucks/drivers on behalf of a carrier company</td></tr>
+          <tr><td>admin</td><td>—</td><td>Moderation, audit-log access, manual document/score review</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Target improvements: a 15-minute <code>access_token</code> + a rotating httpOnly-cookie <code>refresh_token</code>, revocation via a Redis deny-list, MFA for enterprise accounts, SSO (OAuth2/OIDC) for large shipper accounts, scoped API keys for integrations (TMS connectors).</p>
+
+    <!-- 10 -->
+    <h2 id="s10-en"><span class="num">10</span>Security</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Area</th><th>Current state</th><th>Target</th></tr></thead>
+        <tbody>
+          <tr><td>Secrets</td><td><code>JWT_SECRET</code> from an env var, code default <code>"dev-secret-change-me"</code></td><td>A secrets manager (Vault/AWS Secrets Manager), no defaults in code</td></tr>
+          <tr><td>CORS</td><td><code>allow_origins=["*"]</code>, all methods/headers</td><td>An explicit allowlist of production frontend domains</td></tr>
+          <tr><td>Rate limiting</td><td>None</td><td>At the API Gateway, tighter specifically on <code>/auth/*</code></td></tr>
+          <tr><td>Resource-level authorization</td><td>Missing (section 17)</td><td>Ownership checks (a shipper sees/edits only their own loads) on every mutating endpoint</td></tr>
+          <tr><td>PII &amp; documents</td><td>N/A — no documents yet</td><td>Encryption at rest (S3 SSE), PII masking before LLM calls (section 7.8)</td></tr>
+          <tr><td>Audit</td><td>None</td><td><code>audit_log</code>: who/what/when, plus a separate log of every AI message sent on the platform's behalf (section 7.1)</td></tr>
+          <tr><td>Dependencies</td><td>Not scanned</td><td>Dependabot/<code>pip-audit</code> in CI, blocking on critical CVEs</td></tr>
+          <tr><td>Pentest</td><td>Not done (demo stage)</td><td>Before public launch, then yearly / after major changes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 11 -->
+    <h2 id="s11-en"><span class="num">11</span>Infrastructure &amp; DevOps</h2>
+    <p>Today: <code>docker-compose.yml</code> brings up three containers — <code>db</code> (Postgres 16 with a healthcheck), <code>backend</code> (FastAPI, retries the DB connection on startup), <code>frontend</code> (Vite dev server). One host, no separate environments.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Environment</th><th>Purpose</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>local</td><td>Development via <code>docker compose up</code></td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>staging</td><td>Pre-release verification, synthetic data</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>production</td><td>Kubernetes, separate node pools for Core and AI workers (AI workers get GPU access/higher CPU limits and their own autoscaling on event-queue depth)</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>CI/CD (Phase 2):</strong> GitHub Actions — lint (ruff/eslint) → tests → build Docker images → push to registry → auto-deploy to staging, manual approval for production. <strong>Backups:</strong> a daily Postgres snapshot plus point-in-time recovery up to 7 days; documents in object storage — versioning is on to guard against accidental overwrites.</p>
+
+    <!-- 12 -->
+    <h2 id="s12-en"><span class="num">12</span>Performance &amp; scalability</h2>
+    <ul>
+      <li><strong>Caching.</strong> Redis for the "hot" list of open loads and rate-forecast results (a few minutes' TTL — a forecast shouldn't be recomputed on every list render).</li>
+      <li><strong>Async work.</strong> Heavy AI calls (negotiation, OCR) run through a queue (Celery/RQ on Redis, later Kafka), not inside the API's request-response cycle.</li>
+      <li><strong>DB indexes.</strong> A composite <code>loads(status, created_at)</code> index for the main list; <code>loads(origin, destination, equipment_type)</code> for matching; a pgvector HNSW index on <code>embedding</code>.</li>
+      <li><strong>Read replicas.</strong> Load-list and analytics reads come from a replica; writes stay on primary — once load justifies it.</li>
+      <li><strong>CDN.</strong> Frontend static assets and uploaded documents (via signed URLs) sit behind a CDN, not proxied through the backend.</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Metric</th><th>Target budget</th></tr></thead>
+        <tbody>
+          <tr><td>Load list, p95</td><td class="num-col">&lt; 200 ms</td></tr>
+          <tr><td>Post a load, p95</td><td class="num-col">&lt; 300 ms</td></tr>
+          <tr><td>AI matching (async), p95</td><td class="num-col">&lt; 3 s</td></tr>
+          <tr><td>Negotiation Agent first move, p95</td><td class="num-col">&lt; 8 s</td></tr>
+          <tr><td>Core API availability</td><td class="num-col">99.9%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 13 -->
+    <h2 id="s13-en"><span class="num">13</span>Observability</h2>
+    <p>Today — just <code>uvicorn</code>'s stdout logs, nothing structured. The target stack:</p>
+    <ul>
+      <li><strong>Logs</strong> — structured (JSON), carrying a <code>request_id</code> through Gateway → Core → event → AI service, for end-to-end tracing of a single user request.</li>
+      <li><strong>Metrics</strong> — Prometheus: per-endpoint latency, event-queue depth, AI call cost in dollars per day.</li>
+      <li><strong>Tracing</strong> — OpenTelemetry, with AI spans tagged separately (model, token count, provider latency).</li>
+      <li><strong>AI-specific observability:</strong> an eval pipeline against real cases after every prompt/model change; quality drift (a sudden jump in the Negotiation Agent's human-escalation rate signals a regression); a human review queue for documents and scoring as an explicit UI, not a side effect.</li>
+      <li><strong>Feedback loop.</strong> Every manual correction (a dispatcher fixing an AI offer, a human correcting a document field) is logged as a training example for the next eval set and potential fine-tuning/prompt tuning.</li>
+    </ul>
+
+    <!-- 14 -->
+    <h2 id="s14-en"><span class="num">14</span>External integrations</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Category</th><th>Why</th><th>Used in</th></tr></thead>
+        <tbody>
+          <tr><td>Mapping / traffic</td><td>Distance, drive time, congestion</td><td>ETA, Matching (deadhead miles)</td></tr>
+          <tr><td>Weather</td><td>ETA adjustment, delay risk</td><td>ETA</td></tr>
+          <tr><td>Carrier ELD / telematics</td><td>Real GPS position, driver HOS limits</td><td>ETA, Trust</td></tr>
+          <tr><td>FMCSA / credit bureaus</td><td>MC/DOT verification, insurance coverage, claims history</td><td>Trust Scoring, company onboarding</td></tr>
+          <tr><td>e-Signature</td><td>Signing rate confirmations without emailing PDFs back and forth</td><td>Document Intelligence, offers</td></tr>
+          <tr><td>Payments / factoring</td><td>Fast carrier payout after POD (future monetization)</td><td>Load completion</td></tr>
+          <tr><td>SMS / email provider</td><td>Notifications, a channel for the Negotiation Agent</td><td>Notification, Negotiation</td></tr>
+          <tr><td>DAT/Truckstop (public APIs where available)</td><td>Cold-start market data for Pricing before enough proprietary history accumulates</td><td>Pricing Service</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 15 -->
+    <h2 id="s15-en"><span class="num">15</span>Testing &amp; quality</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Level</th><th>Tool</th><th>Covers</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Unit (backend)</td><td>pytest</td><td>Schemas, business rules (e.g. load status transitions)</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>Unit (frontend)</td><td>Vitest + Testing Library</td><td>Components, <code>AuthContext</code></td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>Integration</td><td>pytest + a test Postgres in Docker</td><td>API endpoints end-to-end through the DB</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>E2E</td><td>Playwright</td><td>Sign up → post → take a load</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+          <tr><td>AI eval</td><td>An in-house harness over a fixed case set</td><td>Negotiation/Matching/Trust quality — regression checks before every prompt or model release</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Load</td><td>k6/Locust</td><td>Latency under peak load, event-queue behavior under backpressure</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Today there are no tests — not a single file under <code>backend/tests</code> or <code>frontend/src/**/*.test.*</code>. The top Phase 2 priority: cover the load status transition (<code>open→accepted→completed</code>) and endpoint authorization, since that's exactly where the known gap is right now (section 17).</p>
+
+    <!-- 16 -->
+    <h2 id="s16-en"><span class="num">16</span>Technical roadmap</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Phase</th><th>Technical goal</th><th>AI features unlocked</th></tr></thead>
+        <tbody>
+          <tr><td><b>MVP</b> <span class="pill pill--done">done</span></td><td>Transactional scaffold: auth, loads, statuses</td><td>—</td></tr>
+          <tr><td><b>Phase 2</b> <span class="pill pill--wip">3–4 mo</span></td><td>Resource-level authorization, tests, CI, task queue, object storage, pgvector</td><td>Smart load matching, natural-language search (basic version)</td></tr>
+          <tr><td><b>Phase 3</b> <span class="pill pill--planned">5–9 mo</span></td><td>Kubernetes, event bus, observability, mobile app</td><td>Rate forecast, trust scoring, document automation, ETA</td></tr>
+          <tr><td><b>Phase 4</b> <span class="pill pill--research">R&amp;D</span></td><td>Multi-region, enterprise SSO, payment rail</td><td>AI negotiation assistant (the highest-value but riskiest feature — shipped last, after users trust the simpler AI features)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The order is deliberate: the Negotiation Agent is the most valuable feature, but also the riskiest — the model speaks on the platform's behalf with real money on the line. It ships last, once the guardrail, audit, and escalation infrastructure (sections 7.1, 13) has already been proven on lower-risk AI features.</p>
+
+    <!-- 17 -->
+    <h2 id="s17-en"><span class="num">17</span>Technical debt &amp; known limitations</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Issue</th><th>Impact</th><th>Priority</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> don't check authentication or role, despite what the README promises</td><td>Anyone without a token can post/take/close loads</td><td><span class="pill pill--risk">P0</span></td></tr>
+          <tr><td>2</td><td><code>loads.shipper_name</code>/<code>carrier_name</code> are free text, not FKs into <code>users</code></td><td>Load ownership can't be verified; the data is trivial to fake</td><td><span class="pill pill--risk">P0</span></td></tr>
+          <tr><td>3</td><td>JWT has no refresh and no revocation, default secret in code</td><td>A stolen token stays valid for up to 7 days; risk if a build ever ships with the default <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>5</td><td>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</td><td>No managed path for evolving the schema against production data</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>No tests (backend or frontend)</td><td>Regressions aren't caught before production</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>7</td><td>No rate limiting on <code>/api/auth/*</code></td><td>Vulnerable to password brute-forcing</td><td><span class="pill pill--risk">P2</span></td></tr>
+          <tr><td>8</td><td>AI services are still a spec, not code</td><td>The core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Items 1–2 are the first things worth closing before any public access to the demo, even before AI work starts: without an FK link between a load and its owner, you can't correctly build trust scoring, personalized matching, or a negotiation log — the entire AI subsystem in section 7 implicitly assumes this gets fixed in Phase 2.</p>
+
+    <footer class="doc-footer">
+      <span>AI Loadboard · Technical Documentation v0.1</span>
+      <span>2026-08-15</span>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  var switcher = document.querySelector('.lang-switch');
+  if (!switcher) return;
+  var buttons = switcher.querySelectorAll('button');
+
+  function apply(lang) {
+    document.body.classList.toggle('lang-en', lang === 'en');
+    document.documentElement.lang = lang;
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.lang === lang ? 'true' : 'false');
+    });
+    try { localStorage.setItem('ai-loadboard-doc-lang', lang); } catch (e) {}
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () { apply(b.dataset.lang); });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem('ai-loadboard-doc-lang'); } catch (e) {}
+  apply(saved === 'en' ? 'en' : 'uk');
+})();
+</script>
+
+</body>
+</html>

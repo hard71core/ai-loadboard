@@ -1,0 +1,18 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+.env
+.idea/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# TS project-reference build output for vite.config.ts — tsc emits these
+# next to the source because `composite: true` requires *some* emit;
+# they're pure build cache, not source.
+frontend/vite.config.js
+frontend/vite.config.d.ts
+*.tsbuildinfo
