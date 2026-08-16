@@ -60,7 +60,7 @@ jobs:
         run: pytest --cov=app --cov-report=term-missing
 
   frontend:
-    name: Frontend · lint + build
+    name: Frontend · lint + test + build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -79,6 +79,9 @@ jobs:
 
       - name: Lint (eslint)
         run: npm run lint
+
+      - name: Tests
+        run: npm run test:coverage
 
       - name: Type-check + build
         run: npm run build

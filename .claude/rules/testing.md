@@ -105,7 +105,61 @@ beyond this is listed in `docs/technical-documentation.html` section 15.
 
 ## Frontend
 
-**No test runner is configured yet** (no Vitest, no Testing Library) —
-`npm run build` (`tsc` type-check + `vite build`) is the only frontend check
-CI runs today. If you're asked to add frontend tests, that's new tooling to
-set up, not something already wired in.
+Vitest + Testing Library (`frontend/vitest.config.ts`, jsdom environment).
+Deliberately a config file separate from `vite.config.ts` — the app's dev/
+build config never has to know about test-only concerns (jsdom, the setup
+file), and vice versa. `vitest@3.x` is pinned rather than latest
+(`vitest@4.x`, whose `dependencies.vite` range is `^6.0.0 || ^7.0.0 ||
+^8.0.0`) specifically because the app itself is still on `vite@^5.4.0` —
+`vitest@4.x` would pull in a second, separate `vite@8` install alongside
+it rather than deduping onto the app's own `vite@5.4.x` (`npm ls vitest
+vite` shows the dedup working correctly with 3.x). Don't bump the `vitest`
+major without bumping the app's own `vite` major in the same change, or
+that duplicate-install problem comes back.
+
+```bash
+cd frontend
+npm test                # watch mode
+npm run test:run        # single run, as CI does
+npm run test:coverage   # single run + a v8 coverage report
+```
+
+`src/test/setup.ts` registers `@testing-library/jest-dom`'s matchers and
+an explicit `afterEach(cleanup)` — `test.globals` is off (this project
+imports `describe`/`it`/`expect`/`vi` explicitly everywhere, same as
+everything else here), so Testing Library's own auto-cleanup (which only
+self-registers when it detects a global `afterEach`) wouldn't otherwise
+run, and unmounted-but-not-cleaned-up components would leak between tests
+— for `AuthContext.tsx` specifically, that would mean a leaked pending
+`setTimeout` from its refresh-scheduling logic.
+
+**This is a first slice, the same philosophy as the backend's early test
+files** — not full coverage, the pieces that had the clearest reason to
+be tested first: 4 files, 18 tests today.
+`frontend/src/AuthContext.test.tsx` is the biggest one — the
+bootstrap-via-refresh-token flow (success, failure, and the no-stored-
+token case), and `logout()` revoking server-side and clearing local state
+even when that server call fails — `../api` is mocked at the module level
+(`vi.mock("./api", ...)`) so no network/backend is involved.
+`frontend/src/components/EtaWindow.test.tsx` covers its full state
+machine: nothing rendered for an open load (and the API is never even
+called), the formatted arrival window, the "unavailable" fallback both
+when the API returns no window and when the call rejects outright.
+`frontend/src/components/AuthPanel.test.tsx` drives the actual form via
+`@testing-library/user-event` — login, a failed login's error message,
+switching to the register tab and submitting company name + role. (Its
+submit button's accessible name duplicates a tab's name once that tab is
+active — "Log in" while on the login tab, "Sign up" once switched to
+register — so tests query `button[type="submit"]` directly rather than by
+role name, see the file's comment.) `frontend/src/geocode.test.ts` is the
+odd one out — a pure-function test for `haversineMiles`, no
+mocking/rendering needed at all.
+
+Everything else — every page (`HomePage`, `LoadsPage`, `LoadDetailPage`,
+`DocsPage`), `RouteMap.tsx` (Leaflet — would need jsdom canvas/geometry
+shims), `App.tsx`'s shell/nav, `api.ts` itself — has no tests yet. That's
+the next gap, not a secret one.
+
+CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
+step, between lint and the type-check/build step — a test failure fails
+the job before the (slower) build even starts.

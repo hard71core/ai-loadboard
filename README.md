@@ -90,6 +90,8 @@ cd frontend
 npm install
 npm run dev                         # http://localhost:5173
 npm run lint
+npm test                            # Vitest, watch mode
+npm run test:run                    # Vitest, single run (what CI runs)
 npm run build
 ```
 
@@ -106,7 +108,7 @@ pre-commit install
 ### CI
 
 `.github/workflows/ci.yml` runs backend lint+tests (against a real Postgres
-service) and frontend lint+build on every push/PR via GitHub Actions.
+service) and frontend lint+test+build on every push/PR via GitHub Actions.
 
 ## What the demo does
 

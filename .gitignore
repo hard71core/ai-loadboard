@@ -9,12 +9,15 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+coverage/
 
-# TS project-reference build output for vite.config.ts — tsc emits these
-# next to the source because `composite: true` requires *some* emit;
-# they're pure build cache, not source.
+# TS project-reference build output for vite.config.ts/vitest.config.ts —
+# tsc emits these next to the source because `composite: true` requires
+# *some* emit; they're pure build cache, not source.
 frontend/vite.config.js
 frontend/vite.config.d.ts
+frontend/vitest.config.js
+frontend/vitest.config.d.ts
 *.tsbuildinfo
 
 # Claude Code local session state — not shared project config.

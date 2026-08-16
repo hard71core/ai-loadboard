@@ -68,9 +68,18 @@ code.
   could mark their own still-`open` load `completed` directly, skipping
   `accepted` entirely — closed by adding the missing status check;
   `test_complete_rejects_a_load_that_was_never_accepted`
-  (`backend/tests/test_load_ownership.py`) is the regression test. Frontend
-  test coverage is unaffected by this — still zero, see below, that's a
-  separate, still-open gap.
+  (`backend/tests/test_load_ownership.py`) is the regression test.
+- ~~No frontend test runner existed at all~~ — **fixed the infrastructure,
+  not the coverage.** Vitest + Testing Library now exist
+  (`frontend/vitest.config.ts`), wired into CI as its own step, and 4
+  files/18 tests cover the highest-logic pieces first:
+  `AuthContext.tsx`'s bootstrap-via-refresh and `logout()` (the module this
+  gap most directly motivated — see the trade-off callout below, this is
+  exactly the code with a real security property to protect), `EtaWindow.tsx`'s
+  fail-closed rendering, `AuthPanel.tsx`'s login/register form flow, and
+  `geocode.ts`'s `haversineMiles`. See `.claude/rules/testing.md`. This is
+  explicitly a first slice — most pages and components still have zero
+  tests, tracked below, not closed.
 
 Both P0s, the JWT gap, and the backend half of the test-coverage gap were
 tracked in `docs/technical-documentation.html` section 17, now marked
@@ -97,14 +106,28 @@ but doesn't stop the theft itself the way an httpOnly cookie would.
   needs an actual XSS elsewhere first, and there's no known one, but this
   is the kind of gap that's cheap to close later and expensive to discover
   in an incident.
-- No frontend tests exist at all — no Vitest, no Testing Library, nothing
-  wired into CI beyond `eslint`/`tsc`/`vite build` (see
-  `.claude/rules/testing.md`). The backend half of this gap is closed (see
-  "Resolved" above); this is what's left of it. Tracked as P1 — the same
-  reasoning as before applies with equal or more force now that the
-  frontend owns real logic of its own (`AuthContext.tsx`'s refresh/rotation
-  scheduling, `RouteMap.tsx`/`EtaWindow.tsx`'s fail-closed fallbacks), not
-  just rendering.
+- Frontend test coverage is still a first slice — 4 files/18 tests (see
+  "Resolved" above and `.claude/rules/testing.md`), but every page
+  (`HomePage`, `LoadsPage`, `LoadDetailPage`, `DocsPage`), `RouteMap.tsx`,
+  `App.tsx`'s shell/nav, and `api.ts` itself have none. Tracked as P1,
+  downgraded in urgency from "the runner doesn't even exist" but not
+  closed — most of the frontend's actual logic still has no regression
+  safety net.
+- `frontend/`'s `vite@^5.4.0` transitively pulls a vulnerable `esbuild`
+  (`npm audit`: GHSA-67mh-4wv8-2f99, moderate — the dev server accepts
+  cross-origin requests and echoes responses back, so any website a
+  developer has open can read what the dev server returns). Predates the
+  frontend-test-tooling work — surfaced by it, since that was the first
+  `npm audit` run this session, not introduced by it. No fix exists within
+  the `vite@5.x`/`6.x` range; `npm audit fix --force` would jump straight
+  to `vite@8`, a 3-major-version bump entirely out of scope for a
+  dependency-hygiene fix, and this project's Docker setup runs the dev
+  server itself (`npm run dev`, not a built-and-served `dist/`) even in
+  its "production-like" container, so the exposure isn't purely local-dev
+  either. Tracked as P2, same reasoning as the other demo-stage gaps above
+  — fine while nothing public depends on this, needs the real Vite
+  major-version upgrade (a separate, deliberate migration) before any
+  public deploy.
 - `POST /api/search` (`core/llm.py`) has no rate limiting, no per-request
   or per-period cost cap, and no auth requirement — once `NL_SEARCH_ENABLED`
   is turned on, anyone can trigger billed Anthropic API calls at will (the
