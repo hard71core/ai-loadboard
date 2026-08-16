@@ -16,3 +16,7 @@ htmlcov/
 frontend/vite.config.js
 frontend/vite.config.d.ts
 *.tsbuildinfo
+
+# Claude Code local session state — not shared project config.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

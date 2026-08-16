@@ -12,14 +12,17 @@ features are implemented**. The backend is a plain FastAPI CRUD service
 bus, etc.) is a *target design*, documented but not built — see "Docs" below
 before assuming any AI-related code exists to modify.
 
+Detailed conventions live in `.claude/rules/`: `code-style.md`, `testing.md`,
+`security.md`. This file has the project shape, commands, and the rules that
+apply everywhere no matter what file you're touching.
+
 ## Ground rules
 
 - **Never install anything globally on the host.** No `pip install` outside
   `.venv`, no `npm install -g`, no `brew install` for anything this project
-  depends on. Python deps go in `.venv/` (`pip install -r ...` after
-  activating it), JS deps in `frontend/node_modules/` (`npm install`). If a
-  genuinely system-level tool is missing (Docker, a language runtime itself),
-  ask before installing it rather than reaching for a global install.
+  depends on. Python deps go in `.venv/`, JS deps in `frontend/node_modules/`.
+  If a genuinely system-level tool is missing (Docker, a language runtime
+  itself), ask before installing it rather than reaching for a global install.
 - **Docs move with the code, in the same change.** Any change to
   architecture, the data model, endpoints, config/env vars, or tooling gets
   reflected in `docs/technical-documentation.html` as part of that change —
@@ -29,18 +32,10 @@ before assuming any AI-related code exists to modify.
   `--print-to-pdf`, as used to produce the current one). If you close an item
   in the section 17 tech-debt table, mark it resolved there instead of
   leaving it stale.
-- **Build it like a senior team would, not like a demo.** Proper error
-  handling and input validation, no unused/dead config, tests for new
-  behavior, small reviewable commits with real messages — the bar is "would
-  this pass review from a senior engineer," not "does it run once."
-- **Default to standard security practice**, unprompted: secrets only ever
-  live in `.env` (never committed, never hardcoded as a fallback in code
-  beyond the existing dev placeholder), every mutating endpoint checks auth
-  and ownership, CORS stays an explicit allowlist, queries stay parameterized
-  (SQLAlchemy handles this — don't hand-build SQL strings), dependencies stay
-  within the version bounds in `requirements.txt`/`package.json`. If you spot
-  a gap like this while working on something else, say so explicitly (e.g.
-  add it to section 17) rather than quietly leaving it.
+- **Build it like a senior team would, not like a demo.** The bar is "would
+  this pass review from a senior engineer," not "does it run once" — see
+  `.claude/rules/code-style.md` and `.claude/rules/testing.md` for what that
+  means concretely here.
 
 ## Git workflow
 
@@ -74,10 +69,6 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r backend/requirements-dev.txt
 docker compose up -d db                              # only the DB
 cd backend && uvicorn app.main:app --reload --port 8000
-
-ruff check .                                          # lint
-pytest                                                # all tests (needs the DB above)
-pytest tests/test_health.py::test_health_check_returns_ok   # single test
 ```
 
 The PyCharm interpreter for this project is `.venv/bin/python` at the repo root.
@@ -88,11 +79,7 @@ The PyCharm interpreter for this project is `.venv/bin/python` at the repo root.
 cd frontend
 npm install
 npm run dev      # :5173
-npm run lint      # eslint
-npm run build     # tsc type-check + vite build — this is also the CI "test" step
 ```
-
-There is no frontend test runner configured yet.
 
 ### pre-commit
 
@@ -117,20 +104,10 @@ There are **two DB URLs by design**: `DATABASE_URL` (host networking —
 `backend` service in `docker-compose.yml`). Don't collapse these into one.
 
 **Data model** (`backend/app/models.py`) is intentionally minimal: `users`
-and `loads` only. Notably, `loads.shipper_name` / `carrier_name` are free-text
-columns, **not foreign keys** into `users` — a load isn't actually linked to
-the authenticated user who posted or took it. Relatedly, `POST /api/loads`,
-`/api/loads/{id}/accept` and `/api/loads/{id}/complete` in `backend/app/main.py`
-do **not** check authentication or role, even though the README describes
-them as restricted to authenticated shippers/carriers. Both are known,
-tracked gaps (see Docs) — don't assume ownership/auth semantics exist just
-because a field or a README line implies them.
-
-Auth (`backend/app/auth.py`) is JWT (HS256, via `python-jose`) with
-`bcrypt`/`passlib` password hashing, sent as `Authorization: Bearer <token>`.
-No refresh token, no revocation. Schema is created via
-`Base.metadata.create_all()` on startup (`lifespan` in `main.py`) — there are
-no migrations.
+and `loads` only, no migrations — schema is created via
+`Base.metadata.create_all()` in the `lifespan` handler in `main.py`. Known
+ownership/auth gaps in this model are tracked in `.claude/rules/security.md`,
+not repeated here.
 
 **Docs** (`docs/`) hold two long-form specs, each with an HTML source and a
 generated PDF twin:
@@ -138,9 +115,9 @@ generated PDF twin:
 - `technical-documentation.html` — the actual engineering spec: target
   architecture, data model, and per-feature design for the 7 planned AI
   services, plus a UA/EN language toggle. Its final section is a running,
-  prioritized list of known technical debt (including the two gaps above) —
-  check it before "fixing" something that's already a tracked, deliberate
-  decision, and update it if you close one of those items.
+  prioritized list of known technical debt — check it before "fixing"
+  something that's already a tracked, deliberate decision, and update it if
+  you close one of those items.
 
 CI (`.github/workflows/ci.yml`) runs the backend job against a real
 `postgres:16-alpine` service container, not a mock — tests that need the DB
