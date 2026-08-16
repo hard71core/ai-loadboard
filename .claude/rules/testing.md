@@ -12,7 +12,10 @@ paths:
 `pytest` is configured via `backend/pyproject.toml`
 (`testpaths = ["tests"]`). Tests need a **real** Postgres reachable at the
 `DATABASE_URL` from `.env` — the app's `lifespan` handler connects to it on
-startup, so `TestClient` won't work against a mock:
+startup, so `TestClient` won't work against a mock. A session-scoped
+autouse fixture in `conftest.py` runs `alembic upgrade head` before
+anything else, so a bare `docker compose up -d db` (empty DB, no tables
+yet) is enough — no separate manual migration step:
 
 ```bash
 docker compose up -d db     # or: full docker compose up, either works
@@ -42,8 +45,8 @@ one caught a real bug during development — a bare `{load_id}` path matches
 *any* string at Starlette's routing layer, including "matches", and 422s
 instead of falling through to matching.py's route) — still nowhere near
 coverage, just the slices that existed reasons to test first.
-`backend/tests/conftest.py` holds the shared
-`register_user(client, role)` helper (extracted out of
+`backend/tests/conftest.py` holds the migration fixture above plus the
+shared `register_user(client, role)` helper (extracted out of
 `test_load_ownership.py` once `test_search.py` needed the same setup) — use
 it instead of writing a new inline registration helper. When you add backend
 behavior, add a test for it in `backend/tests/` following their pattern

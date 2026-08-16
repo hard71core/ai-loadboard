@@ -2,8 +2,24 @@
 requirement common to every test module here."""
 
 import uuid
+from pathlib import Path
 
+import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _apply_migrations():
+    """Runs `alembic upgrade head` once before any test — mirrors what
+    backend/entrypoint.sh does for the real app, so `docker compose up -d db
+    && pytest` still just works without a separate manual migration step.
+    Idempotent (a no-op once the DB's already at head), so it's harmless
+    that CI also runs its own explicit migration step before pytest — see
+    .github/workflows/ci.yml."""
+    backend_dir = Path(__file__).resolve().parents[1]
+    command.upgrade(Config(str(backend_dir / "alembic.ini")), "head")
 
 
 def register_user(client: TestClient, role: str) -> tuple[str, str]:

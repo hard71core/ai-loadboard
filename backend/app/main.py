@@ -1,19 +1,20 @@
-import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.exc import OperationalError
 
 from . import models
 from .api.routes import auth, loads, matching, search
 from .core.config import get_cors_origins
-from .core.database import Base, engine, get_db
+from .core.database import get_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db_with_retry()
+    # Schema is Alembic's job now (migrations/), applied before this
+    # process starts — backend/entrypoint.sh in Docker, `alembic upgrade
+    # head` for bare uvicorn, a conftest.py fixture for pytest. This
+    # handler's only remaining job is demo seed data.
     db = next(get_db())
     try:
         if db.query(models.Load).count() == 0:
@@ -80,19 +81,6 @@ SEED_LOADS = [
         shipper_name="AutoParts Direct",
     ),
 ]
-
-
-def init_db_with_retry(retries: int = 15, delay: float = 2.0) -> None:
-    """The db container may still be starting up when this service boots —
-    retry table creation instead of crashing immediately."""
-    for attempt in range(1, retries + 1):
-        try:
-            Base.metadata.create_all(bind=engine)
-            return
-        except OperationalError:
-            if attempt == retries:
-                raise
-            time.sleep(delay)
 
 
 @app.get("/api/health")

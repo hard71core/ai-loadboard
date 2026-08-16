@@ -12,7 +12,7 @@ one on); the rest of the AI subsystem described in
 
 - **Frontend:** React + TypeScript (Vite), `frontend/`
 - **Backend:** Python, FastAPI, `backend/`
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL, schema managed by Alembic migrations (`backend/migrations/`)
 - **AI:** Anthropic Claude (Haiku 4.5, structured outputs) — natural-language load
   search, `backend/app/core/llm.py`
 - **Maps:** Leaflet + CARTO Voyager tiles, OpenStreetMap Nominatim for geocoding
@@ -70,6 +70,7 @@ pip install -r backend/requirements-dev.txt
 
 docker compose up -d db            # only the DB is needed; run the backend yourself
 cd backend
+alembic upgrade head                # apply migrations (pytest does this for you too)
 uvicorn app.main:app --reload --port 8000
 
 # in another terminal
