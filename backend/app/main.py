@@ -144,8 +144,20 @@ def list_loads(status: str | None = None, db: Session = Depends(get_db)):
 
 
 @app.post("/api/loads", response_model=schemas.LoadOut)
-def create_load(payload: schemas.LoadCreate, db: Session = Depends(get_db)):
-    load = models.Load(**payload.model_dump())
+def create_load(
+    payload: schemas.LoadCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != models.UserRole.shipper:
+        raise HTTPException(
+            status_code=403, detail="Тільки вантажовідправники можуть публікувати вантажі"
+        )
+    load = models.Load(
+        **payload.model_dump(),
+        shipper_id=current_user.id,
+        shipper_name=current_user.company_name,
+    )
     db.add(load)
     db.commit()
     db.refresh(load)
@@ -153,13 +165,20 @@ def create_load(payload: schemas.LoadCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/api/loads/{load_id}/accept", response_model=schemas.LoadOut)
-def accept_load(load_id: int, payload: schemas.AcceptPayload, db: Session = Depends(get_db)):
+def accept_load(
+    load_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != models.UserRole.carrier:
+        raise HTTPException(status_code=403, detail="Тільки перевізники можуть брати вантажі")
     load = db.query(models.Load).filter(models.Load.id == load_id).first()
     if not load:
         raise HTTPException(status_code=404, detail="Load not found")
     if load.status != models.LoadStatus.open:
         raise HTTPException(status_code=400, detail="Load already taken")
-    load.carrier_name = payload.carrier_name
+    load.carrier_id = current_user.id
+    load.carrier_name = current_user.company_name
     load.status = models.LoadStatus.accepted
     db.commit()
     db.refresh(load)
@@ -167,10 +186,16 @@ def accept_load(load_id: int, payload: schemas.AcceptPayload, db: Session = Depe
 
 
 @app.post("/api/loads/{load_id}/complete", response_model=schemas.LoadOut)
-def complete_load(load_id: int, db: Session = Depends(get_db)):
+def complete_load(
+    load_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     load = db.query(models.Load).filter(models.Load.id == load_id).first()
     if not load:
         raise HTTPException(status_code=404, detail="Load not found")
+    if current_user.id not in (load.shipper_id, load.carrier_id):
+        raise HTTPException(status_code=403, detail="Немає прав завершити цей вантаж")
     load.status = models.LoadStatus.completed
     db.commit()
     db.refresh(load)
