@@ -49,14 +49,14 @@ export default function AuthPanel({ onClose, initialMode = "login" }: Props) {
           className={`tab ${mode === "login" ? "active" : ""}`}
           onClick={() => setMode("login")}
         >
-          Вхід
+          Log in
         </button>
         <button
           type="button"
           className={`tab ${mode === "register" ? "active" : ""}`}
           onClick={() => setMode("register")}
         >
-          Реєстрація
+          Sign up
         </button>
       </div>
 
@@ -73,35 +73,35 @@ export default function AuthPanel({ onClose, initialMode = "login" }: Props) {
             />
           </label>
           <label>
-            Пароль
+            Password
             <input
               required
               type="password"
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Мінімум 6 символів"
+              placeholder="At least 6 characters"
             />
           </label>
           {mode === "register" && (
             <>
               <label>
-                Назва компанії
+                Company name
                 <input
                   required
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Назва компанії"
+                  placeholder="Company name"
                 />
               </label>
               <label>
-                Роль
+                Role
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as UserRole)}
                 >
-                  <option value="shipper">Вантажовідправник</option>
-                  <option value="carrier">Перевізник</option>
+                  <option value="shipper">Shipper</option>
+                  <option value="carrier">Carrier</option>
                 </select>
               </label>
             </>
@@ -113,13 +113,13 @@ export default function AuthPanel({ onClose, initialMode = "login" }: Props) {
         <div className="auth-actions">
           <button className="btn primary" type="submit" disabled={submitting}>
             {submitting
-              ? "Зачекайте…"
+              ? "Please wait…"
               : mode === "login"
-                ? "Увійти"
-                : "Зареєструватися"}
+                ? "Log in"
+                : "Sign up"}
           </button>
           <button className="btn" type="button" onClick={onClose}>
-            Скасувати
+            Cancel
           </button>
         </div>
       </form>

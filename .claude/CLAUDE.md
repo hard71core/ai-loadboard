@@ -143,7 +143,7 @@ gaps (JWT refresh/revocation, test coverage) are tracked in
 
 **Docs** (`docs/`) hold two long-form specs, each with an HTML source and a
 generated PDF twin:
-- `project-documentation.html` — investor-facing overview.
+- `project-documentation.html` — investor-facing overview, UA/EN language toggle.
 - `technical-documentation.html` — the actual engineering spec: target
   architecture, data model, and per-feature design for the 7 planned AI
   services, plus a UA/EN language toggle. Its final section is a running,

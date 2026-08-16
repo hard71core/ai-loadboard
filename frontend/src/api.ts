@@ -25,7 +25,7 @@ async function handle<T>(res: Response, fallbackMessage: string): Promise<T> {
 
 export async function fetchLoads(): Promise<Load[]> {
   const res = await fetch(`${API_URL}/api/loads`);
-  return handle<Load[]>(res, "Не вдалося завантажити список вантажів");
+  return handle<Load[]>(res, "Failed to load the load list");
 }
 
 export async function searchLoads(query: string): Promise<Load[]> {
@@ -34,7 +34,7 @@ export async function searchLoads(query: string): Promise<Load[]> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
   });
-  return handle<Load[]>(res, "Не вдалося виконати пошук");
+  return handle<Load[]>(res, "Search failed");
 }
 
 export async function createLoad(
@@ -49,7 +49,7 @@ export async function createLoad(
     },
     body: JSON.stringify(payload),
   });
-  return handle<Load>(res, "Не вдалося опублікувати вантаж");
+  return handle<Load>(res, "Failed to post the load");
 }
 
 export async function acceptLoad(id: number, token: string): Promise<Load> {
@@ -57,7 +57,7 @@ export async function acceptLoad(id: number, token: string): Promise<Load> {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
-  return handle<Load>(res, "Не вдалося взяти вантаж");
+  return handle<Load>(res, "Failed to accept the load");
 }
 
 export async function registerUser(payload: RegisterPayload): Promise<AuthResponse> {
@@ -66,7 +66,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return handle<AuthResponse>(res, "Не вдалося зареєструватися");
+  return handle<AuthResponse>(res, "Sign-up failed");
 }
 
 export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
@@ -75,12 +75,12 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return handle<AuthResponse>(res, "Не вдалося увійти");
+  return handle<AuthResponse>(res, "Log in failed");
 }
 
 export async function fetchMe(token: string): Promise<User> {
   const res = await fetch(`${API_URL}/api/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return handle<User>(res, "Сесія недійсна");
+  return handle<User>(res, "Session is invalid");
 }

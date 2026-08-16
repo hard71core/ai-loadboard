@@ -55,3 +55,10 @@ wire it into actual behavior, don't leave it declared-but-unread), proper
 error handling over silent failure, and code written to the standard you'd
 want a senior engineer reviewing it against — see the root
 `.claude/CLAUDE.md` ground rules for the non-code-specific version of this.
+
+**English only, everywhere except the two `docs/*.html` specs.** Code,
+comments, UI copy, API error messages (`HTTPException(detail=...)`), seed
+data, commit messages, and `README.md` are all English — no Cyrillic. The
+one deliberate exception is `docs/project-documentation.html` and
+`docs/technical-documentation.html` (see "Docs" in `.claude/CLAUDE.md`),
+which carry a UA/EN toggle and stay bilingual on purpose.

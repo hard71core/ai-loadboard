@@ -5,14 +5,14 @@ import AuthPanel from "./components/AuthPanel";
 import type { Load, LoadCreatePayload, LoadStatus } from "./types";
 
 const STATUS_LABEL: Record<LoadStatus, string> = {
-  open: "Відкрито",
-  accepted: "Взято",
-  completed: "Завершено",
+  open: "Open",
+  accepted: "Accepted",
+  completed: "Completed",
 };
 
 const ROLE_LABEL = {
-  shipper: "Вантажовідправник",
-  carrier: "Перевізник",
+  shipper: "Shipper",
+  carrier: "Carrier",
 };
 
 interface FormState {
@@ -138,19 +138,19 @@ export default function App() {
                   {user.company_name} · {ROLE_LABEL[user.role]}
                 </span>
                 <button className="btn small" onClick={logout}>
-                  Вийти
+                  Log out
                 </button>
               </>
             ) : (
               <>
                 <button className="btn small" onClick={() => openAuth("login")}>
-                  Увійти
+                  Log in
                 </button>
                 <button
                   className="btn small primary"
                   onClick={() => openAuth("register")}
                 >
-                  Реєстрація
+                  Sign up
                 </button>
               </>
             )}
@@ -172,11 +172,11 @@ export default function App() {
         <div className="stats">
           <div className="stat">
             <div className="stat-value">{loads.length}</div>
-            <div className="stat-label">Всього вантажів</div>
+            <div className="stat-label">Total loads</div>
           </div>
           <div className="stat">
             <div className="stat-value">{openCount}</div>
-            <div className="stat-label">Відкрито зараз</div>
+            <div className="stat-label">Open now</div>
           </div>
         </div>
 
@@ -185,28 +185,28 @@ export default function App() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Пошук: напр. «рефрижератор із Далласа до 900»"
+            placeholder="Search: e.g. “reefer out of Dallas under 900”"
           />
           <button className="btn primary" type="submit" disabled={searching}>
-            {searching ? "Шукаємо…" : "Пошук"}
+            {searching ? "Searching…" : "Search"}
           </button>
           {searchActive && (
             <button className="btn small" type="button" onClick={clearSearch}>
-              Скинути пошук
+              Clear search
             </button>
           )}
         </form>
 
         <div className="toolbar">
-          <h2>{searchActive ? "Результати пошуку" : "Доступні вантажі"}</h2>
+          <h2>{searchActive ? "Search results" : "Available loads"}</h2>
           {user?.role === "shipper" && (
             <button className="btn primary" onClick={() => setShowForm((s) => !s)}>
-              {showForm ? "Скасувати" : "+ Опублікувати вантаж"}
+              {showForm ? "Cancel" : "+ Post a load"}
             </button>
           )}
           {!user && (
             <button className="btn primary" onClick={() => openAuth("register")}>
-              Увійти, щоб опублікувати вантаж
+              Log in to post a load
             </button>
           )}
         </div>
@@ -217,36 +217,36 @@ export default function App() {
           <form className="card form" onSubmit={handleCreate}>
             <div className="form-grid">
               <label>
-                Опис вантажу
+                Load description
                 <input
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Напр. Побутова техніка"
+                  placeholder="e.g. Home appliances"
                 />
               </label>
               <label>
-                Звідки
+                Origin
                 <input
                   required
                   value={form.origin}
                   onChange={(e) => setForm({ ...form, origin: e.target.value })}
-                  placeholder="Місто, штат"
+                  placeholder="City, state"
                 />
               </label>
               <label>
-                Куди
+                Destination
                 <input
                   required
                   value={form.destination}
                   onChange={(e) =>
                     setForm({ ...form, destination: e.target.value })
                   }
-                  placeholder="Місто, штат"
+                  placeholder="City, state"
                 />
               </label>
               <label>
-                Тип кузова
+                Equipment type
                 <select
                   value={form.equipment_type}
                   onChange={(e) =>
@@ -259,7 +259,7 @@ export default function App() {
                 </select>
               </label>
               <label>
-                Вага (lbs)
+                Weight (lbs)
                 <input
                   required
                   type="number"
@@ -271,7 +271,7 @@ export default function App() {
                 />
               </label>
               <label>
-                Ставка (USD)
+                Rate (USD)
                 <input
                   required
                   type="number"
@@ -285,24 +285,24 @@ export default function App() {
               </label>
             </div>
             <button className="btn primary" type="submit" disabled={submitting}>
-              {submitting ? "Публікуємо…" : "Опублікувати вантаж"}
+              {submitting ? "Posting…" : "Post load"}
             </button>
           </form>
         )}
 
         {loading ? (
-          <p className="muted">Завантаження…</p>
+          <p className="muted">Loading…</p>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Маршрут</th>
-                  <th>Кузов</th>
-                  <th>Вага</th>
-                  <th>Ставка</th>
-                  <th>Відправник</th>
-                  <th>Статус</th>
+                  <th>Route</th>
+                  <th>Equipment</th>
+                  <th>Weight</th>
+                  <th>Rate</th>
+                  <th>Shipper</th>
+                  <th>Status</th>
                   <th></th>
                 </tr>
               </thead>
@@ -323,7 +323,7 @@ export default function App() {
                       </span>
                       {load.carrier_name && (
                         <div className="small muted">
-                          Перевізник: {load.carrier_name}
+                          Carrier: {load.carrier_name}
                         </div>
                       )}
                     </td>
@@ -334,14 +334,14 @@ export default function App() {
                             className="btn small primary"
                             onClick={() => handleAccept(load.id)}
                           >
-                            Взяти вантаж
+                            Accept load
                           </button>
                         ) : !user ? (
                           <button
                             className="btn small"
                             onClick={() => openAuth("register")}
                           >
-                            Увійти, щоб взяти
+                            Log in to accept
                           </button>
                         ) : null)}
                     </td>
@@ -350,7 +350,7 @@ export default function App() {
                 {loads.length === 0 && (
                   <tr>
                     <td colSpan={7} className="muted">
-                      Поки що немає вантажів. Опублікуйте перший.
+                      No loads yet. Post the first one.
                     </td>
                   </tr>
                 )}

@@ -39,7 +39,7 @@ def get_current_user(
 ) -> models.User:
     credentials_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Не вдалося перевірити облікові дані",
+        detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     if not token:

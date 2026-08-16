@@ -22,9 +22,7 @@ def create_load(
     current_user: models.User = Depends(get_current_user),
 ):
     if current_user.role != models.UserRole.shipper:
-        raise HTTPException(
-            status_code=403, detail="Тільки вантажовідправники можуть публікувати вантажі"
-        )
+        raise HTTPException(status_code=403, detail="Only shippers can post loads")
     load = models.Load(
         **payload.model_dump(),
         shipper_id=current_user.id,
@@ -43,7 +41,7 @@ def accept_load(
     current_user: models.User = Depends(get_current_user),
 ):
     if current_user.role != models.UserRole.carrier:
-        raise HTTPException(status_code=403, detail="Тільки перевізники можуть брати вантажі")
+        raise HTTPException(status_code=403, detail="Only carriers can accept loads")
     load = db.query(models.Load).filter(models.Load.id == load_id).first()
     if not load:
         raise HTTPException(status_code=404, detail="Load not found")
@@ -67,7 +65,7 @@ def complete_load(
     if not load:
         raise HTTPException(status_code=404, detail="Load not found")
     if current_user.id not in (load.shipper_id, load.carrier_id):
-        raise HTTPException(status_code=403, detail="Немає прав завершити цей вантаж")
+        raise HTTPException(status_code=403, detail="Not authorized to complete this load")
     load.status = models.LoadStatus.completed
     db.commit()
     db.refresh(load)

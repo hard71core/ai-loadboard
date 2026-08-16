@@ -1,56 +1,57 @@
-# AI Loadboard — тестова версія
+# AI Loadboard — demo
 
-Демо вантажної біржі з прямим з'єднанням вантажовідправника і перевізника (без брокера).
-Базовий транзакційний каркас плюс перша реальна AI-функція — пошук вантажів природною
-мовою; решта AI-підсистеми з `docs/technical-documentation.html` поки що лише
-спроєктована, не побудована.
+A freight marketplace demo connecting shippers and carriers directly (no broker).
+A basic transactional scaffold plus the first real AI feature — natural-language
+load search; the rest of the AI subsystem described in
+`docs/technical-documentation.html` is designed but not yet built.
 
-## Стек
+## Stack
 
 - **Frontend:** React + TypeScript (Vite), `frontend/`
 - **Backend:** Python, FastAPI, `backend/`
-- **База даних:** PostgreSQL
-- **AI:** Anthropic Claude (Haiku 4.5, structured outputs) — пошук вантажів природною
-  мовою, `backend/app/core/llm.py`
+- **Database:** PostgreSQL
+- **AI:** Anthropic Claude (Haiku 4.5, structured outputs) — natural-language load
+  search, `backend/app/core/llm.py`
 
-## Налаштування
+## Setup
 
-Усі конфіденційні дані (пароль БД, JWT-секрет, порти) живуть в одному файлі `.env`
-у корені проєкту, який **не** комітиться в git. Перед першим запуском:
+All sensitive config (DB password, JWT secret, ports) lives in a single `.env`
+file at the project root, which is **not** committed to git. Before the first run:
 
 ```bash
 cp .env.example .env
 ```
 
-За замовчуванням там лежать робочі значення для локальної розробки — міняти
-нічого не обов'язково, щоб просто підняти проєкт. Перед будь-яким shared/staging
-оточенням обов'язково згенеруйте новий `JWT_SECRET` (`openssl rand -hex 32`) і
-не перевикористовуйте секрети між середовищами.
+It ships with working defaults for local development — no changes needed just to
+bring the project up. Before any shared/staging environment, always generate a
+new `JWT_SECRET` (`openssl rand -hex 32`) and never reuse secrets across
+environments.
 
-`ANTHROPIC_API_KEY` — опційний. Без нього (або з плейсхолдером із `.env.example`)
-пошук вантажів природною мовою (`POST /api/search`) просто повертає нефільтрований
-список замість застосування AI-фільтра — застосунок ніде не падає й нічого не
-блокує через відсутність ключа.
+`ANTHROPIC_API_KEY` is optional. Without it (or with the placeholder from
+`.env.example`), natural-language load search (`POST /api/search`) simply
+returns the unfiltered list instead of applying an AI filter — the app never
+crashes or blocks on a missing key.
 
-## Запуск через Docker
+## Running via Docker
 
-Потрібен запущений Docker Desktop.
+Requires Docker Desktop running.
 
 ```bash
 docker compose up --build
 ```
 
-Після запуску:
+Once it's up:
 
-- Фронтенд: http://localhost:5173
+- Frontend: http://localhost:5173
 - API: http://localhost:8001
-- Документація API (Swagger): http://localhost:8001/docs
+- API docs (Swagger): http://localhost:8001/docs
 
-База даних автоматично наповнюється кількома демо-вантажами при першому запуску.
+The database seeds itself with a handful of demo loads on first run.
 
-## Розробка без Docker
+## Developing without Docker
 
-Для роботи в PyCharm/локально (автодоповнення, дебагер, тести без перебілду контейнера):
+For working in PyCharm/locally (autocomplete, debugger, tests without rebuilding
+the container):
 
 ```bash
 # Backend
@@ -58,17 +59,18 @@ python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r backend/requirements-dev.txt
 
-docker compose up -d db            # потрібна лише БД, бекенд запускаємо самі
+docker compose up -d db            # only the DB is needed; run the backend yourself
 cd backend
 uvicorn app.main:app --reload --port 8000
 
-# в іншому терміналі
-pytest                              # тести
-ruff check .                        # лінт
+# in another terminal
+pytest                              # tests
+ruff check .                        # lint
 ```
 
-У PyCharm: `Settings → Project → Python Interpreter` вже вказує на `.venv/bin/python`
-у корені репозиторію (створюється автоматично при першому відкритті проєкту).
+In PyCharm: `Settings → Project → Python Interpreter` already points at
+`.venv/bin/python` at the repo root (created automatically the first time the
+project is opened).
 
 ```bash
 # Frontend
@@ -79,10 +81,10 @@ npm run lint
 npm run build
 ```
 
-### pre-commit (опційно, але рекомендовано)
+### pre-commit (optional, but recommended)
 
-Автоматично прибирає trailing whitespace, ловить великі файли/приватні ключі
-й ганяє `ruff` перед кожним комітом:
+Automatically strips trailing whitespace, catches large files/private keys,
+and runs `ruff` before every commit:
 
 ```bash
 pip install pre-commit
@@ -91,29 +93,30 @@ pre-commit install
 
 ### CI
 
-`.github/workflows/ci.yml` ганяє лінт+тести бекенду (з реальним Postgres-сервісом)
-і лінт+білд фронтенду на кожен push/PR у GitHub Actions.
+`.github/workflows/ci.yml` runs backend lint+tests (against a real Postgres
+service) and frontend lint+build on every push/PR via GitHub Actions.
 
-## Що вміє демо
+## What the demo does
 
-- Реєстрація та вхід (email + пароль, JWT), з вибором ролі при реєстрації:
-  **вантажовідправник** або **перевізник**
-- Список відкритих вантажів (маршрут, тип кузова, вага, ставка, відправник)
-- Пошук вантажів природною мовою (напр. «рефрижератор із Далласа до 900») —
-  Claude Haiku 4.5 перетворює запит на структурований фільтр; без ключа або
-  при збої LLM повертається звичайний нефільтрований список
-- Публікація нового вантажу — доступно тільки авторизованим вантажовідправникам
-- «Взяти вантаж» — доступно тільки авторизованим перевізникам; беруть вантаж напряму,
-  без брокера-посередника
-- Статуси: Відкрито → Взято → Завершено
+- Sign up and log in (email + password, JWT), with a role picked at
+  registration: **shipper** or **carrier**
+- List of open loads (route, equipment type, weight, rate, shipper)
+- Natural-language load search (e.g. "reefer out of Dallas under 900") —
+  Claude Haiku 4.5 turns the query into a structured filter; falls back to the
+  plain unfiltered list if the key is missing or the LLM call fails
+- Posting a new load — available only to authenticated shippers
+- "Accept load" — available only to authenticated carriers; they take the load
+  directly, with no broker in between
+- Statuses: Open → Accepted → Completed
 
-Тестові акаунти можна створити прямо в інтерфейсі кнопкою «Реєстрація». Токен сесії
-зберігається в браузері (localStorage), тож після оновлення сторінки вхід зберігається.
+Test accounts can be created right in the UI via the "Sign up" button. The
+session token is stored in the browser (localStorage), so the login persists
+across page reloads.
 
-## Зупинка
+## Stopping
 
 ```bash
 docker compose down
 ```
 
-Додати `-v` до команди, щоб також видалити дані бази (`docker compose down -v`).
+Add `-v` to also drop the database data (`docker compose down -v`).

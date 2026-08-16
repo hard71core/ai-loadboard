@@ -43,7 +43,7 @@ app.include_router(search.router)
 # matched with a carrier — no broker in between.
 SEED_LOADS = [
     dict(
-        title="Охолоджені продукти",
+        title="Refrigerated produce",
         origin="Dallas, TX",
         destination="Houston, TX",
         equipment_type="Reefer",
@@ -52,7 +52,7 @@ SEED_LOADS = [
         shipper_name="Northgate Foods",
     ),
     dict(
-        title="Будматеріали",
+        title="Building materials",
         origin="Chicago, IL",
         destination="Indianapolis, IN",
         equipment_type="Flatbed",
@@ -61,7 +61,7 @@ SEED_LOADS = [
         shipper_name="Midwest Builders Supply",
     ),
     dict(
-        title="Побутова техніка",
+        title="Home appliances",
         origin="Atlanta, GA",
         destination="Charlotte, NC",
         equipment_type="Dry Van",
@@ -70,7 +70,7 @@ SEED_LOADS = [
         shipper_name="Home Comfort Retail",
     ),
     dict(
-        title="Автозапчастини",
+        title="Auto parts",
         origin="Detroit, MI",
         destination="Cleveland, OH",
         equipment_type="Dry Van",

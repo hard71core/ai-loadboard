@@ -85,9 +85,43 @@
   }
   .phase b { color: #1f6feb; }
   code { background: #f1f3f6; padding: 1pt 4pt; border-radius: 3pt; font-size: 10pt; }
+
+  /* ---- language switch ---- */
+  .lang-switch {
+    position: fixed; top: 14pt; right: 14pt; z-index: 100;
+    display: flex; gap: 2pt; padding: 3pt;
+    background: #ffffff; border: 1pt solid #d7dce3; border-radius: 20pt;
+    box-shadow: 0 2pt 10pt rgba(18, 22, 31, .08);
+  }
+  .lang-switch button {
+    appearance: none; border: none; background: transparent; cursor: pointer;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt; text-transform: uppercase; letter-spacing: .05em; font-weight: 600;
+    color: #6b7482; padding: 5pt 11pt; border-radius: 16pt; line-height: 1;
+  }
+  .lang-switch button[aria-pressed="true"] { background: #1f6feb; color: #fff; }
+  .lang-switch button:hover:not([aria-pressed="true"]) { color: #1c2430; }
+
+  .content[data-lang="en"] { display: none; }
+  body.lang-en .content[data-lang="uk"] { display: none; }
+  body.lang-en .content[data-lang="en"] { display: block; }
+
+  @media print {
+    .lang-switch { display: none; }
+    .content[data-lang="en"] { display: none; }
+    body.lang-en .content[data-lang="uk"] { display: none; }
+    body.lang-en .content[data-lang="en"] { display: block; }
+  }
 </style>
 </head>
 <body>
+
+<div class="lang-switch" role="group" aria-label="Document language / Мова документа">
+  <button type="button" data-lang="uk" aria-pressed="true">UA</button>
+  <button type="button" data-lang="en" aria-pressed="false">EN</button>
+</div>
+
+<div class="content" data-lang="uk">
 
 <div class="cover">
   <div class="tag">CONFIDENTIAL — INVESTOR OVERVIEW</div>
@@ -252,6 +286,208 @@ performance-маркетингом (платне залучення трафік
 
 <p class="small">Документ підготовлено як робочий огляд проєкту для обговорення з інвесторами.
 Конфіденційно — не для розповсюдження без згоди авторів.</p>
+
+</div>
+
+<div class="content" data-lang="en">
+
+<div class="cover">
+  <div class="tag">CONFIDENTIAL — INVESTOR OVERVIEW</div>
+  <h1>AI Loadboard</h1>
+  <p class="subtitle">A direct AI freight platform —<br>
+  no broker middleman, Uber-style</p>
+  <p class="small">Project Overview · August 2026</p>
+</div>
+
+<h2>1. Executive Summary</h2>
+<p>The North American loadboard market has run on a handful of entrenched players for decades —
+DAT Freight&nbsp;&amp;&nbsp;Analytics and Truckstop.com. Both products solve the basic problem of
+"matching a load with an available truck," but do it mostly by hand: a dispatcher filters the list
+themselves, judges whether a rate is fair themselves, vets the counterparty themselves, and runs the
+negotiation themselves.</p>
+<p><b>AI Loadboard</b> is a loadboard in the same class as DAT/Truckstop on core functionality
+(load and truck search, rate analytics, counterparty checks), but with a next-generation level of
+automation: AI matches loads, forecasts the market rate, scores counterparty risk, and takes over the
+routine parts of negotiation and paperwork.</p>
+<p>The project's core strategic goal is to <b>remove the broker as a middleman from the logistics
+chain</b> and connect the shipper directly with the carrier. It's the same move Uber once made in the
+taxi industry: before Uber, a passenger called a dispatcher, the dispatcher manually looked for a free
+car and radioed the driver — Uber removed the dispatcher and connected passenger and driver directly
+through an app. AI Loadboard aims to repeat that outcome in American logistics: replace the broker's
+role — finding a counterparty, pricing the rate, checking trustworthiness, agreeing on terms — with an
+algorithm and AI, leaving the human with only the actual hauling.</p>
+
+<h2>2. Problem &amp; market opportunity</h2>
+<ul>
+  <li><b>An unnecessary middleman.</b> The broker takes their own margin (typically 15–20% of the
+    freight rate) for a function that's essentially search-and-match — exactly what an algorithm
+    does well.</li>
+  <li><b>Manual load matching.</b> Dispatchers spend hours scrolling and filtering lists instead of
+    receiving ready-made, relevant matches.</li>
+  <li><b>Opaque pricing.</b> Lane rates change daily; without good analytics, carriers and brokers
+    negotiate "blind" and leave margin on the table.</li>
+  <li><b>Fraud and double-brokerage risk.</b> An industry-wide problem existing platforms only
+    partially address — with a basic credit-history check.</li>
+  <li><b>Dated UX.</b> Leading platforms are technologically conservative: filter forms, no
+    natural-language search or assistants.</li>
+</ul>
+<p>These gaps leave room for a player that builds the same core functionality but with an AI layer on
+top of it — not as a bolt-on "feature," but as the product's core operating principle.</p>
+
+<h2>3. Product &amp; vision</h2>
+<h3>3.1 Core differentiator: a direct connection, no broker</h3>
+<p>DAT and Truckstop are platforms where a human still closes the loop between load and truck: a
+broker or dispatcher who manually picks the counterparty, negotiates the rate, and takes their own
+margin for the intermediation. AI Loadboard removes that link: the platform itself matches shipper and
+carrier, itself sets a fair rate from market data, and itself checks both sides' trustworthiness —
+the same way Uber replaced the dispatcher with an algorithm and connected passenger and driver
+directly.</p>
+<p>For the carrier this means a higher rate (no broker margin); for the shipper, a lower shipping cost
+and transparency. The platform monetizes not by withholding information or gatekeeping the
+intermediation, but through the technology that makes the direct match possible.</p>
+
+<h3>3.2 Product architecture</h3>
+<p>The platform combines three layers:</p>
+<ol>
+  <li><b>Core loadboard</b> — a real-time load and truck marketplace, comparable in scope to
+    DAT/Truckstop (search, filters, company profiles, history).</li>
+  <li><b>AI layer</b> — smart matching, rate forecasting, risk scoring, document automation
+    (section 5).</li>
+  <li><b>Trust &amp; compliance</b> — company verification, a reputation system, fraud protection —
+    replacing the oversight function a broker traditionally provides.</li>
+</ol>
+
+<h2>4. Competitive landscape</h2>
+<h3>4.1 DAT Freight &amp; Analytics and Truckstop.com</h3>
+<p>The industry's leading platforms. They offer real-time load/truck search, market rate analytics,
+basic counterparty trust checks, TMS/ELD integrations, and factoring. Monetized through tiered
+subscriptions, with no AI-driven matching or negotiation automation.</p>
+
+<h3>4.2 LoadHunt ($LHUNT)</h3>
+<p>A project working an adjacent AI + logistics angle: a browser extension for optimizing load
+booking on DAT and Truckstop, an AI transportation-management system (TMS), and an AI dispatcher,
+with a planned extension into its own ELD. LoadHunt isn't a standalone loadboard — it runs
+"on top of" existing platforms and monetizes through a utility token rather than a classic SaaS
+model.</p>
+<div class="callout">
+  <b>Positioning:</b> existing players are either conservative and AI-free (DAT, Truckstop) or
+  AI-oriented but dependent on someone else's platform (LoadHunt). The niche of a full loadboard with
+  AI built in "out of the box" remains open.
+</div>
+
+<h3>4.3 Prior attempts at "Uber for trucking"</h3>
+<p>The idea of removing the broker from the chain has already been tested in the market, and that
+track record is worth acknowledging honestly:</p>
+<ul>
+  <li><b>Convoy</b> — a startup that explicitly branded itself "Uber for trucking," raised over $900M
+    from well-known funds and private investors, but shut down in October 2023 amid a freight-market
+    downturn and its inability to raise further funding under those conditions.</li>
+  <li><b>Uber Freight</b> — Uber's own play in this space (since 2017), spun out as a separate company
+    in 2024. It technically connects shippers and carriers directly, but in practice still operates on
+    digital-broker logic: it takes a commission per deal and never actually eliminated the
+    intermediation function — only automated it.</li>
+</ul>
+<p>The takeaway for our strategy: the direct-connection idea is technically sound and market-tested —
+these companies failed not because the hypothesis was wrong, but because they scaled on very thin
+margins without a sufficient AI layer to bring down the cost of verifying trust and risk. Our focus on
+AI for trust scoring, rate forecasting, and negotiation automation (section 5) is exactly what lets us
+hold onto the unit economics where our predecessors lost them.</p>
+
+<h2>5. Key AI capabilities</h2>
+<table>
+  <tr><th>Feature</th><th>What it does</th><th>Value</th></tr>
+  <tr><td>Smart load matching</td><td>AI weighs route, deadhead miles, history, and carrier
+    preferences to surface the best-fit loads</td><td>Less deadhead mileage, less time spent
+    searching</td></tr>
+  <tr><td>Market rate forecast</td><td>Forecasts the lane's freight price days ahead, not just
+    historical statistics</td><td>A stronger negotiating position</td></tr>
+  <tr><td>AI negotiation assistant</td><td>Runs the first round of contact with the counterparty and
+    settles the rate within set bounds</td><td>Automates routine calls and back-and-forth</td></tr>
+  <tr><td>Counterparty trust scoring</td><td>Assesses non-payment or fraud risk from history and
+    documents</td><td>Protection against double-brokerage</td></tr>
+  <tr><td>Document automation</td><td>Recognizes and processes BOL/POD/rate confirmation</td>
+    <td>Less manual work for dispatchers and accounting</td></tr>
+  <tr><td>Natural-language search</td><td>A free-form query instead of a filter form</td>
+    <td>A faster, more accessible interface</td></tr>
+  <tr><td>Arrival time forecast</td><td>ETA estimate accounting for traffic, weather, and driver
+    hours-of-service limits</td><td>More accurate planning for the shipper</td></tr>
+</table>
+
+<h2>6. Business model</h2>
+<p><b>Revenue model:</b> a subscription + take-rate hybrid — Uber-style, where the driver doesn't pay
+for access to the order list but a small percentage of each completed ride.</p>
+<table>
+  <tr><th>Tier</th><th>Indicative price</th><th>Audience</th></tr>
+  <tr><td>Base</td><td>$9.99/mo</td><td>Owner-operators</td></tr>
+  <tr><td>Pro</td><td>$14.99/mo</td><td>Small fleets</td></tr>
+  <tr><td>Business</td><td>$29.99/mo</td><td>Fleets and transportation-management teams</td></tr>
+</table>
+<p><b>Take rate:</b> a small percentage of the value of each successfully completed shipment matched
+directly on the platform — significantly below a traditional broker margin (15–20%), since part of
+the intermediation function is performed by AI rather than a human. This is the primary revenue
+driver as deal volume grows; the subscription covers access to the tooling (AI matching, analytics,
+document automation).</p>
+<p class="small">The pricing grid and take-rate figures are an illustrative starting point for
+validation; final numbers get refined from pilot results.</p>
+<p><b>Initial customer acquisition strategy:</b> launch a pilot program with a limited set of carrier
+companies on preferential terms to gather feedback and early case studies, in parallel with
+performance marketing (paid traffic acquisition) to scale the user base once the product hypothesis
+is validated.</p>
+
+<h2>7. Target audience &amp; go-to-market</h2>
+<p>A two-sided model — the same shape as passenger and driver in Uber:</p>
+<ul>
+  <li><b>Shippers</b> — manufacturers, retailers, companies that regularly need to move freight; they
+    get a direct, transparent price with no broker markup.</li>
+  <li><b>Carriers — owner-operators and small fleets</b> — the bulk of classic loadboard users, and
+    the most sensitive to saving time and fuel and to a higher rate from cutting out the
+    middleman.</li>
+  <li><b>Fleets and transportation-management teams</b> — run several trucks at once, and benefit the
+    most from automated matching and negotiation.</li>
+</ul>
+<p>Market entry starts with a pilot cohort inside an existing industry contact network, followed by
+expansion through paid acquisition and a referral program.</p>
+
+<h2>8. Roadmap</h2>
+<div class="phase"><b>Phase 1 — MVP.</b> Core loadboard (load/truck search, company profiles) + the
+first AI module (smart load matching). Launches in a narrow niche/region rather than nationwide at
+once — informed by Convoy's experience with the risks of premature scaling.</div>
+<div class="phase"><b>Phase 2 — Pilot.</b> Launch with a limited cohort of shippers and carriers,
+direct matching with no broker, gathering feedback, iterating on pricing and UX.</div>
+<div class="phase"><b>Phase 3 — Expanding the AI features.</b> Rate forecasting, trust scoring,
+document automation.</div>
+<div class="phase"><b>Phase 4 — Scaling.</b> Paid user acquisition, a referral program, expanding
+geography/segments.</div>
+
+<p class="small">This document is prepared as a working project overview for discussion with
+investors. Confidential — not for distribution without the authors' consent.</p>
+
+</div>
+
+<script>
+(function () {
+  var switcher = document.querySelector('.lang-switch');
+  if (!switcher) return;
+  var buttons = switcher.querySelectorAll('button');
+
+  function apply(lang) {
+    document.body.classList.toggle('lang-en', lang === 'en');
+    document.documentElement.lang = lang;
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.lang === lang ? 'true' : 'false');
+    });
+    try { localStorage.setItem('ai-loadboard-doc-lang', lang); } catch (e) {}
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () { apply(b.dataset.lang); });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem('ai-loadboard-doc-lang'); } catch (e) {}
+  apply(saved === 'en' ? 'en' : 'uk');
+})();
+</script>
 
 </body>
 </html>
