@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { acceptLoad, createLoad, fetchLoads, searchLoads } from "./api";
+import { acceptLoad, createLoad, fetchLoads, fetchMatches, searchLoads } from "./api";
 import { useAuth } from "./AuthContext";
 import AuthPanel from "./components/AuthPanel";
 import type { Load, LoadCreatePayload, LoadStatus } from "./types";
@@ -51,6 +51,9 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
 
+  const [matchesActive, setMatchesActive] = useState(false);
+  const [loadingMatches, setLoadingMatches] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -79,6 +82,7 @@ export default function App() {
     try {
       setLoads(await searchLoads(searchQuery));
       setSearchActive(true);
+      setMatchesActive(false);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -90,6 +94,27 @@ export default function App() {
   async function clearSearch() {
     setSearchQuery("");
     setSearchActive(false);
+    await loadData();
+  }
+
+  async function handleShowMatches() {
+    if (!token) return;
+    setLoadingMatches(true);
+    try {
+      setLoads(await fetchMatches(token));
+      setMatchesActive(true);
+      setSearchActive(false);
+      setSearchQuery("");
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoadingMatches(false);
+    }
+  }
+
+  async function clearMatches() {
+    setMatchesActive(false);
     await loadData();
   }
 
@@ -118,7 +143,13 @@ export default function App() {
     if (!user || !token) return;
     try {
       await acceptLoad(id, token);
-      await loadData();
+      // Stay in whichever view was active instead of silently dropping back
+      // to the plain list.
+      if (matchesActive) {
+        setLoads(await fetchMatches(token));
+      } else {
+        await loadData();
+      }
     } catch (e) {
       setError((e as Error).message);
     }
@@ -198,7 +229,27 @@ export default function App() {
         </form>
 
         <div className="toolbar">
-          <h2>{searchActive ? "Search results" : "Available loads"}</h2>
+          <h2>
+            {searchActive
+              ? "Search results"
+              : matchesActive
+                ? "Recommended for you"
+                : "Available loads"}
+          </h2>
+          {user?.role === "carrier" &&
+            (matchesActive ? (
+              <button className="btn small" onClick={clearMatches}>
+                Show all loads
+              </button>
+            ) : (
+              <button
+                className="btn primary"
+                onClick={handleShowMatches}
+                disabled={loadingMatches}
+              >
+                {loadingMatches ? "Finding matches…" : "★ Recommended for you"}
+              </button>
+            ))}
           {user?.role === "shipper" && (
             <button className="btn primary" onClick={() => setShowForm((s) => !s)}>
               {showForm ? "Cancel" : "+ Post a load"}

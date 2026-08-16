@@ -37,6 +37,13 @@ export async function searchLoads(query: string): Promise<Load[]> {
   return handle<Load[]>(res, "Search failed");
 }
 
+export async function fetchMatches(token: string): Promise<Load[]> {
+  const res = await fetch(`${API_URL}/api/loads/matches`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handle<Load[]>(res, "Failed to load recommended loads");
+}
+
 export async function createLoad(
   payload: LoadCreatePayload,
   token: string,

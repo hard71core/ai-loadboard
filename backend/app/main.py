@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 
 from . import models
-from .api.routes import auth, loads, search
+from .api.routes import auth, loads, matching, search
 from .core.config import get_cors_origins
 from .core.database import Base, engine, get_db
 
@@ -37,6 +37,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(loads.router)
+app.include_router(matching.router)
 app.include_router(search.router)
 
 # Demo seed data: a handful of loads posted directly by shippers, waiting to be

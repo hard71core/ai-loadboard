@@ -7,14 +7,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A demo-stage, two-sided freight marketplace: a shipper posts a load, a carrier
 takes it directly — no broker. The backend is a plain FastAPI CRUD service
 (`backend/app/`) over two tables, the frontend is a single-screen React SPA
-(`frontend/`). **One of the 7 AI features is now real**: natural-language load
-search (`POST /api/search`, `core/llm.py`, Claude Haiku 4.5, structured
-outputs) — see `.claude/rules/security.md` for its `ANTHROPIC_API_KEY`
-requirement and fallback behavior. The other 6 (matching, pricing, the
-negotiation agent, trust scoring, document intelligence, ETA) plus the
-full event-driven architecture (a separate service per feature, an event
-bus) are still a *target design*, documented but not built — see "Docs"
-below before assuming more AI-related code exists than this one feature.
+(`frontend/`). **Two of the 7 planned AI features have a working MVP**:
+natural-language load search (`POST /api/search`, `core/llm.py`, Claude
+Haiku 4.5, structured outputs, gated off by default behind
+`NL_SEARCH_ENABLED` — see `.claude/rules/security.md`) and smart load
+matching (`GET /api/loads/matches`, `api/routes/matching.py`) — but
+matching's MVP is a **deterministic heuristic**, not the embeddings +
+gradient-boosting model section 7.3 of the tech doc describes as the
+target; there's no real carrier behavior data yet to train anything on.
+The other 5 (pricing, the negotiation agent, trust scoring, document
+intelligence, ETA) plus the full event-driven architecture (a separate
+service per feature, an event bus) are still a *target design*, documented
+but not built — see "Docs" below before assuming more AI-related code
+exists than these two features, and don't assume "AI feature" implies an
+LLM/ML call is actually happening — check the route.
 
 Detailed conventions live in `.claude/rules/`: `code-style.md`, `testing.md`,
 `security.md`. This file has the project shape, commands, and the rules that
@@ -107,16 +113,20 @@ api/
   routes/
     auth.py            register/login/me
     loads.py           list/create/accept/complete
+    matching.py          smart matching — deterministic ranking heuristic
+                          (equipment + lane-state overlap with a carrier's
+                          own history), no LLM, no ML model yet
     search.py           NL search — parses via core/llm.py, applies the
                          result as SQLAlchemy filters, same query shape as
                          loads.py's list endpoint when there's no filter
 models.py           SQLAlchemy models — flat, no second domain yet to split it by
 schemas.py          Pydantic schemas — flat, same reasoning
 ```
-`api/routes/` is already split by domain (auth / loads / search); `models.py`
-and `schemas.py` stay flat on purpose — each domain there is still only a
-handful of small classes, not enough to justify a package per domain yet.
-Revisit when one of them actually gets that big, not preemptively.
+`api/routes/` is already split by domain (auth / loads / matching / search);
+`models.py` and `schemas.py` stay flat on purpose — each domain there is
+still only a handful of small classes, not enough to justify a package per
+domain yet. Revisit when one of them actually gets that big, not
+preemptively.
 
 **One `.env` at the repo root is the single source of config**, read three
 different ways:

@@ -26,15 +26,18 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-Right now there are four test files: `backend/tests/test_health.py` (a
+Right now there are five test files: `backend/tests/test_health.py` (a
 smoke test), `backend/tests/test_load_ownership.py` (auth/role/ownership
 on the three mutating load endpoints), `backend/tests/test_search.py`
 (NL search route — LLM filter application, keyword fallback when the LLM
-path is unavailable, empty-query rejection), and `backend/tests/test_llm.py`
+path is unavailable, empty-query rejection), `backend/tests/test_llm.py`
 (the `NL_SEARCH_ENABLED` gate itself — asserts the Anthropic client never
-gets constructed when the flag is off or the key is missing, no DB needed)
-— still nowhere near coverage, just the slices that existed reasons to test
-first. `backend/tests/conftest.py` holds the shared
+gets constructed when the flag is off or the key is missing, no DB needed),
+and `backend/tests/test_matching.py` (smart matching — role gating,
+cold-start carriers get the plain open list, a carrier with history ranks
+a matching load above an unrelated one) — still nowhere near coverage,
+just the slices that existed reasons to test first. `backend/tests/conftest.py`
+holds the shared
 `register_user(client, role)` helper (extracted out of
 `test_load_ownership.py` once `test_search.py` needed the same setup) — use
 it instead of writing a new inline registration helper. When you add backend
@@ -48,9 +51,10 @@ definition site (`app.core.llm.parse_search_query`) — patching the
 definition doesn't affect the name already imported into `search.py`. This
 keeps tests deterministic and runnable in CI with no `ANTHROPIC_API_KEY` and
 no network access. Planned test scope beyond that is listed in
-`docs/technical-documentation.html` section 15 — endpoint authorization and
-NL search are now covered; the next gap is the load status transition itself
-(`open→accepted→completed`, e.g. completing a load that was never accepted).
+`docs/technical-documentation.html` section 15 — endpoint authorization, NL
+search, and matching are now covered; the next gap is the load status
+transition itself (`open→accepted→completed`, e.g. completing a load that
+was never accepted).
 
 ## Frontend
 

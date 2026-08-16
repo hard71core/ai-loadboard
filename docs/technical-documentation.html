@@ -616,7 +616,7 @@ CREATE TABLE documents (
         <thead><tr><th>Сервіс</th><th>Відповідальність</th><th>Ключова техніка</th><th>Статус</th></tr></thead>
         <tbody>
           <tr><td>Core Loadboard Service</td><td>Користувачі, вантажі, статуси, офери, оплата (майбутнє)</td><td>FastAPI + Postgres</td><td><span class="pill pill--done">MVP</span></td></tr>
-          <tr><td>Matching Service</td><td>Ранжування відкритих вантажів під профіль і історію перевізника</td><td>pgvector + gradient-boosted ranking</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Matching Service</td><td>Ранжування відкритих вантажів під профіль і історію перевізника</td><td>MVP: детерміністична евристика (розділ 7.3); pgvector + gradient-boosted ranking — ціль</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Pricing Service</td><td>Прогноз ринкової ставки на маршруті на N днів вперед</td><td>LightGBM / часові ряди, знімки в <code>market_rate_snapshots</code></td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Negotiation Service</td><td>LLM-агент, що веде першу комунікацію й торгується в заданих межах</td><td>LLM function calling + guardrails (розділ 7.1)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Trust Service</td><td>Скоринг надійності контрагента, флаги подвійного брокериджу</td><td>Табличний класифікатор + зовнішні перевірки (FMCSA, страхові)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
@@ -637,7 +637,7 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Функція</th><th>Підхід</th><th>Ключові дані</th><th>Людина в циклі</th></tr></thead>
         <tbody>
-          <tr><td>Розумний підбір вантажу</td><td>Ранжування (embeddings + gradient boosting)</td><td>Маршрут, порожній пробіг, історія прийнятих вантажів</td><td>Ні — лише сортування, вибір за перевізником</td></tr>
+          <tr><td>Розумний підбір вантажу <span class="pill pill--done">MVP</span></td><td>MVP: детерміністична евристика за типом кузова й лейнами (embeddings + gradient boosting — ціль)</td><td>Маршрут, тип кузова, історія прийнятих вантажів перевізника</td><td>Ні — лише сортування, вибір за перевізником</td></tr>
           <tr><td>Прогноз ринкової ставки</td><td>Часові ряди / gradient boosting</td><td>Історичні ставки по лейнах, паливо, сезонність, попит/пропозиція</td><td>Ні — довірчий інтервал показується явно</td></tr>
           <tr><td>AI-асистент переговорів</td><td>LLM-агент із function calling</td><td>Межі ціни від shipper, історія лейну, повідомлення контрагента</td><td>Так — ескалація за межами довіри (розділ 7.1)</td></tr>
           <tr><td>Скоринг надійності</td><td>Табличний класифікатор + правила</td><td>Історія платежів, FMCSA-дані, страхові документи, флаги шахрайства</td><td>Так — низький скор блокує авто-матчинг, потребує ручного review</td></tr>
@@ -713,11 +713,15 @@ CREATE TABLE documents (
     <h3>7.2 Автоматизація документообігу</h3>
     <p>Пайплайн розпізнавання BOL/POD/rate confirmation: <code>upload → OCR/layout → LLM-структурування у JSON → перевірка впевненості → авто-збереження або черга ручної перевірки</code>. Поле <code>confidence</code> з таблиці <code>documents</code> (розділ 5) — це мінімум confidence по обов'язкових полях (сума, дата, підпис/номер вантажу); нижче порогу (напр. 0.90) документ іде в чергу ручної перевірки замість автоматичного застосування. Кожне ручне виправлення записується як приклад для донавчання/промпт-тюнінгу — цикл зворотного зв'язку описаний у розділі 13.
 
-    <h3>7.3–7.7 Інші AI-сервіси — принципи проєктування</h3>
+    <h3>7.3 Розумний підбір вантажу <span class="pill pill--done">MVP</span></h3>
+    <p><strong>Реалізовано:</strong> <code>GET /api/loads/matches</code> (<code>api/routes/matching.py</code>) — детерміністична евристика, без LLM і без ML-моделі. Для перевізника з історією (будь-які вантажі, де він <code>carrier_id</code>, незалежно від статусу) кожен відкритий вантаж отримує бал: +3 за збіг типу кузова з раніше виконаними вантажами, +2 за збіг штату origin і +2 за збіг штату destination із лейнами перевізника; результат сортується за балом, потім за часом публікації. Перевізник без історії (новий акаунт) отримує звичайний список найновіших відкритих вантажів — той самий запит, що й <code>GET /api/loads?status=open</code> — це свідомий детермінований випадок ("холодний старт"), а не порожня чи зламана відповідь.</p>
+    <p><strong>Чому не embeddings + gradient boosting одразу:</strong> цільова модель нижче потребує реальних поведінкових даних (історія прийнять/відмов у масштабі), яких у демо немає — навчання на кількох сід-вантажах дало б випадковий шум, а не сигнал. Той самий принцип, що й у NL Search (розділ 7.6): спершу детерміністична версія, що дає реальну користь сьогодні, апгрейд до моделі — коли з'являться дані, варті навчання.</p>
+
+    <h3>7.4–7.7 Інші AI-сервіси — принципи проєктування</h3>
     <div class="cards">
       <div class="card">
-        <h5>Matching (7.3)</h5>
-        <p>Ембединги вантажу (маршрут, тип кузова, вага, час) + профіль перевізника (домашня база, вподобані лейни, історія прийнять/відмов) → cosine-подібність як базовий сигнал, gradient boosting поверх — для калібрування під фактичну конверсію в прийняття.</p>
+        <h5>Matching — цільова модель (7.3)</h5>
+        <p>Ембединги вантажу (маршрут, тип кузова, вага, час) + профіль перевізника (домашня база, вподобані лейни, історія прийнять/відмов) → cosine-подібність як базовий сигнал, gradient boosting поверх — для калібрування під фактичну конверсію в прийняття. Замінить евристику вище, коли зберуться реальні дані.</p>
       </div>
       <div class="card">
         <h5>Pricing (7.4)</h5>
@@ -775,6 +779,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Взяти вантаж напряму — тільки роль <code>carrier</code>, <code>carrier_id</code> береться з токена</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Позначити завершеним — лише shipper вантажу або carrier, що його взяв</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Пошук вантажів природною мовою — LLM-парсинг у фільтр (розділ 7.6), фолбек на пошук за ключовими словами</td><td>—</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/matches</code></td><td>Розумний підбір вантажу — детерміністична евристика під історію перевізника (розділ 7.3)</td><td>Bearer, роль <code>carrier</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -784,7 +789,6 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Метод</th><th>Шлях</th><th>Опис</th></tr></thead>
         <tbody>
-          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/matches</code></td><td>AI-рекомендації вантажів під профіль перевізника</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/rates/forecast</code></td><td>Прогноз ставки за лейном/типом кузова/датою</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/offers</code></td><td>Створити офер (людиною або AI-агентом)</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Контрпропозиція</td></tr>
@@ -912,7 +916,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів і <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
+    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів, <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>) і <code>GET /api/loads/matches</code> (ранжування, роль, холодний старт). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
 
     <!-- 16 -->
     <h2 id="s16"><span class="num">16</span>Технічна дорожня карта</h2>
@@ -920,8 +924,8 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Фаза</th><th>Технічна ціль</th><th>AI-фічі, що вмикаються</th></tr></thead>
         <tbody>
-          <tr><td><b>MVP</b> <span class="pill pill--done">готово</span></td><td>Транзакційний каркас: auth, вантажі, статуси</td><td>Пошук природною мовою (базова версія — структурований фільтр, без векторного пошуку) <span class="pill pill--done">готово</span></td></tr>
-          <tr><td><b>Фаза 2</b> <span class="pill pill--wip">3–4 міс</span></td><td>Авторизація на рівні ресурсу, тести, CI, черга задач, обʼєктне сховище, pgvector</td><td>Розумний підбір вантажу, векторний пошук поверх NL Search, rate limiting/cost cap для LLM-викликів</td></tr>
+          <tr><td><b>MVP</b> <span class="pill pill--done">готово</span></td><td>Транзакційний каркас: auth, вантажі, статуси</td><td>Пошук природною мовою (базова версія — структурований фільтр, без векторного пошуку) і розумний підбір вантажу (базова версія — детерміністична евристика, без ML) <span class="pill pill--done">готово</span></td></tr>
+          <tr><td><b>Фаза 2</b> <span class="pill pill--wip">3–4 міс</span></td><td>Авторизація на рівні ресурсу, тести, CI, черга задач, обʼєктне сховище, pgvector</td><td>Embeddings + gradient boosting для Matching, векторний пошук поверх NL Search, rate limiting/cost cap для LLM-викликів</td></tr>
           <tr><td><b>Фаза 3</b> <span class="pill pill--planned">5–9 міс</span></td><td>Kubernetes, шина подій, спостережуваність, мобільний застосунок</td><td>Прогноз ставки, скоринг надійності, автоматизація документів, ETA</td></tr>
           <tr><td><b>Фаза 4</b> <span class="pill pill--research">R&amp;D</span></td><td>Multi-region, SSO для enterprise, платіжний рейл</td><td>AI-асистент переговорів (найризикованіша фіча — останньою, після довіри користувачів до простіших AI-функцій)</td></tr>
         </tbody>
@@ -940,9 +944,9 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT без refresh і без відкликання, дефолтний секрет у коді</td><td>Вкрадений токен дійсний до 7 днів; ризик при випадковому деплої з дефолтним <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</td><td>Немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code> і <code>/api/search</code> (13 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code>, <code>/api/search</code> і <code>/api/loads/matches</code> (17 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>Немає rate limiting на <code>/api/auth/*</code></td><td>Вразливість до brute-force підбору пароля</td><td><span class="pill pill--risk">P2</span></td></tr>
-          <tr><td>8</td><td>6 із 7 AI-сервісів — поки що специфікація, не код (реалізовано лише NL Search, розділ 7.6)</td><td>Основна цінність продукту для інвестора здебільшого ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
+          <tr><td>8</td><td>5 із 7 AI-сервісів — поки що специфікація, не код (реалізовано NL Search і Matching MVP, розділи 7.3/7.6 — обидва детерміністичні, без ML/embeddings)</td><td>Основна цінність продукту для інвестора здебільшого ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> без rate limiting і без per-request/per-period cost cap на виклики Anthropic (розділ 7.8 — «circuit breaker» ще не реалізовано)</td><td>Будь-хто без автентифікації може ініціювати необмежену кількість платних LLM-викликів</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>
@@ -1275,7 +1279,7 @@ CREATE TABLE documents (
         <thead><tr><th>Service</th><th>Responsibility</th><th>Key tech</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>Core Loadboard Service</td><td>Users, loads, statuses, offers, payments (future)</td><td>FastAPI + Postgres</td><td><span class="pill pill--done">MVP</span></td></tr>
-          <tr><td>Matching Service</td><td>Ranking open loads against a carrier's profile and history</td><td>pgvector + gradient-boosted ranking</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Matching Service</td><td>Ranking open loads against a carrier's profile and history</td><td>MVP: deterministic heuristic (section 7.3); pgvector + gradient-boosted ranking is the target</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Pricing Service</td><td>Forecasting the market rate on a lane N days out</td><td>LightGBM / time series, snapshots in <code>market_rate_snapshots</code></td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Negotiation Service</td><td>LLM agent that runs the first round of contact and bargains within set bounds</td><td>LLM function calling + guardrails (section 7.1)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Trust Service</td><td>Counterparty trust scoring, double-brokerage flags</td><td>Tabular classifier + external checks (FMCSA, insurance)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
@@ -1296,7 +1300,7 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Feature</th><th>Approach</th><th>Key data</th><th>Human in the loop</th></tr></thead>
         <tbody>
-          <tr><td>Smart load matching</td><td>Ranking (embeddings + gradient boosting)</td><td>Route, deadhead miles, history of accepted loads</td><td>No — ranking only, the carrier picks</td></tr>
+          <tr><td>Smart load matching <span class="pill pill--done">MVP</span></td><td>MVP: deterministic heuristic on equipment type + lanes (embeddings + gradient boosting is the target)</td><td>Route, equipment type, the carrier's own history of accepted loads</td><td>No — ranking only, the carrier picks</td></tr>
           <tr><td>Market rate forecast</td><td>Time series / gradient boosting</td><td>Historical lane rates, fuel, seasonality, supply/demand</td><td>No — confidence interval shown explicitly</td></tr>
           <tr><td>AI negotiation assistant</td><td>LLM agent with function calling</td><td>Price bounds from the shipper, lane history, counterparty messages</td><td>Yes — escalation outside trusted bounds (section 7.1)</td></tr>
           <tr><td>Trust scoring</td><td>Tabular classifier + rules</td><td>Payment history, FMCSA data, insurance documents, fraud flags</td><td>Yes — a low score blocks auto-matching, needs manual review</td></tr>
@@ -1372,11 +1376,15 @@ CREATE TABLE documents (
     <h3>7.2 Document automation</h3>
     <p>The recognition pipeline for BOL/POD/rate confirmation: <code>upload → OCR/layout → LLM structuring into JSON → confidence check → auto-file or manual-review queue</code>. The <code>confidence</code> field on the <code>documents</code> table (section 5) is the minimum confidence across required fields (amount, date, signature/load number); below the threshold (e.g. 0.90) the document goes into the manual-review queue instead of being applied automatically. Every manual correction is logged as a training example for fine-tuning/prompt tuning — the feedback loop is described in section 13.
 
-    <h3>7.3–7.7 Other AI services — design principles</h3>
+    <h3>7.3 Smart load matching <span class="pill pill--done">MVP</span></h3>
+    <p><strong>Shipped:</strong> <code>GET /api/loads/matches</code> (<code>api/routes/matching.py</code>) — a deterministic heuristic, no LLM and no ML model. For a carrier with history (any load where they're the <code>carrier_id</code>, any status), every open load gets a score: +3 for an equipment type they've hauled before, +2 for an origin-state match, +2 for a destination-state match against the carrier's own lanes; results sort by score, then by post time. A carrier with no history yet (a fresh account) gets the plain newest-first open list — the same query <code>GET /api/loads?status=open</code> runs — a deliberate deterministic "cold start" case, not an empty or broken response.</p>
+    <p><strong>Why not embeddings + gradient boosting yet:</strong> the target model below needs real behavioral data (accept/decline history at scale) that doesn't exist in a demo — training on a handful of seed loads would learn noise, not signal. Same principle as NL Search (section 7.6): ship the deterministic version that's actually useful today, upgrade to a model once there's data worth learning from.</p>
+
+    <h3>7.4–7.7 Other AI services — design principles</h3>
     <div class="cards">
       <div class="card">
-        <h5>Matching (7.3)</h5>
-        <p>Load embeddings (route, equipment type, weight, timing) + carrier profile (home base, preferred lanes, accept/decline history) → cosine similarity as the base signal, with gradient boosting on top to calibrate against actual acceptance conversion.</p>
+        <h5>Matching — target model (7.3)</h5>
+        <p>Load embeddings (route, equipment type, weight, timing) + carrier profile (home base, preferred lanes, accept/decline history) → cosine similarity as the base signal, with gradient boosting on top to calibrate against actual acceptance conversion. Replaces the heuristic above once real data accumulates.</p>
       </div>
       <div class="card">
         <h5>Pricing (7.4)</h5>
@@ -1434,6 +1442,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Take a load directly — carrier role only, <code>carrier_id</code> comes from the token</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Mark completed — only the load's shipper or the carrier who took it</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Natural-language load search — LLM parsing into a filter (section 7.6), falls back to a keyword match</td><td>—</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/matches</code></td><td>Smart load matching — deterministic heuristic against the carrier's history (section 7.3)</td><td>Bearer, <code>carrier</code> role</td></tr>
         </tbody>
       </table>
     </div>
@@ -1443,7 +1452,6 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/matches</code></td><td>AI load recommendations for a carrier's profile</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/rates/forecast</code></td><td>Rate forecast by lane/equipment/date</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/offers</code></td><td>Create an offer (human or AI agent)</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Counter-offer</td></tr>
@@ -1571,7 +1579,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, and <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
+    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed), and <code>GET /api/loads/matches</code> (ranking, role gating, cold start). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
 
     <!-- 16 -->
     <h2 id="s16-en"><span class="num">16</span>Technical roadmap</h2>
@@ -1579,8 +1587,8 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Phase</th><th>Technical goal</th><th>AI features unlocked</th></tr></thead>
         <tbody>
-          <tr><td><b>MVP</b> <span class="pill pill--done">done</span></td><td>Transactional scaffold: auth, loads, statuses</td><td>Natural-language search (basic version — structured filter, no vector search yet) <span class="pill pill--done">done</span></td></tr>
-          <tr><td><b>Phase 2</b> <span class="pill pill--wip">3–4 mo</span></td><td>Resource-level authorization, tests, CI, task queue, object storage, pgvector</td><td>Smart load matching, vector search on top of NL Search, rate limiting/cost cap for LLM calls</td></tr>
+          <tr><td><b>MVP</b> <span class="pill pill--done">done</span></td><td>Transactional scaffold: auth, loads, statuses</td><td>Natural-language search (basic version — structured filter, no vector search yet) and smart load matching (basic version — deterministic heuristic, no ML) <span class="pill pill--done">done</span></td></tr>
+          <tr><td><b>Phase 2</b> <span class="pill pill--wip">3–4 mo</span></td><td>Resource-level authorization, tests, CI, task queue, object storage, pgvector</td><td>Embeddings + gradient boosting for Matching, vector search on top of NL Search, rate limiting/cost cap for LLM calls</td></tr>
           <tr><td><b>Phase 3</b> <span class="pill pill--planned">5–9 mo</span></td><td>Kubernetes, event bus, observability, mobile app</td><td>Rate forecast, trust scoring, document automation, ETA</td></tr>
           <tr><td><b>Phase 4</b> <span class="pill pill--research">R&amp;D</span></td><td>Multi-region, enterprise SSO, payment rail</td><td>AI negotiation assistant (the highest-value but riskiest feature — shipped last, after users trust the simpler AI features)</td></tr>
         </tbody>
@@ -1599,9 +1607,9 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT has no refresh and no revocation, default secret in code</td><td>A stolen token stays valid for up to 7 days; risk if a build ever ships with the default <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</td><td>No managed path for evolving the schema against production data</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, and <code>/api/search</code> (13 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, <code>/api/search</code>, and <code>/api/loads/matches</code> (17 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>No rate limiting on <code>/api/auth/*</code></td><td>Vulnerable to password brute-forcing</td><td><span class="pill pill--risk">P2</span></td></tr>
-          <tr><td>8</td><td>6 of 7 AI services are still a spec, not code (only NL Search is built, section 7.6)</td><td>Most of the core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
+          <tr><td>8</td><td>5 of 7 AI services are still a spec, not code (NL Search and Matching MVP are built, sections 7.3/7.6 — both deterministic, no ML/embeddings)</td><td>Most of the core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> has no rate limiting and no per-request/per-period cost cap on Anthropic calls (section 7.8's "circuit breaker" isn't built yet)</td><td>Anyone, unauthenticated, can trigger unlimited billed LLM calls</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>

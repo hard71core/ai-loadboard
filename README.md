@@ -1,8 +1,11 @@
 # AI Loadboard — demo
 
 A freight marketplace demo connecting shippers and carriers directly (no broker).
-A basic transactional scaffold plus the first real AI feature — natural-language
-load search; the rest of the AI subsystem described in
+A basic transactional scaffold plus two working MVP features from the planned AI
+subsystem — natural-language load search and smart load matching (the matching
+MVP is a deterministic ranking heuristic, not the embeddings/ML model the docs
+describe as the target — there's no real carrier behavior data yet to train
+one on); the rest of the AI subsystem described in
 `docs/technical-documentation.html` is designed but not yet built.
 
 ## Stack
@@ -109,6 +112,9 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
   structured filter; off by default (or if the key is missing or the LLM
   call fails), it's a plain keyword match across
   title/origin/destination/equipment instead
+- "★ Recommended for you" for carriers — ranks open loads against the
+  carrier's own history (equipment types and lane states they've run
+  before); a carrier with no history yet just sees the newest loads first
 - Posting a new load — available only to authenticated shippers
 - "Accept load" — available only to authenticated carriers; they take the load
   directly, with no broker in between
