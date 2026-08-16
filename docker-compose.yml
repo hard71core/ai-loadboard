@@ -1,6 +1,15 @@
 # All actual values live in .env (gitignored). Copy .env.example → .env
 # before running this. Compose loads .env from this same directory
 # automatically for ${VAR} substitution below.
+
+# Shared log rotation so a long-running --reload backend or a chatty Vite
+# dev server can't quietly grow an unbounded log file on disk.
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:16-alpine
@@ -17,6 +26,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    logging: *default-logging
+    # Generous ceilings, not a tuned cap — just a backstop against one
+    # container eating the whole machine. Hitting these would mean
+    # something is actually wrong, not normal dev load.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   backend:
     build: ./backend
@@ -35,6 +53,12 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/app:/app/app
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
   frontend:
     build: ./frontend
@@ -47,6 +71,12 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
 volumes:
   db_data:
