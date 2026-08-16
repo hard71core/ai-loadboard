@@ -1,8 +1,11 @@
 name: CI
 
 on:
+  # No branch filter: the actual workflow here is push a branch -> check CI
+  # -> merge to main directly (git merge --ff-only, no GitHub PRs), so CI
+  # has to run on every branch to mean anything before the merge, not just
+  # on main after it. `pull_request` stays too, in case that ever changes.
   push:
-    branches: [main]
   pull_request:
 
 # Cancel superseded runs on the same branch/PR instead of queuing them.
