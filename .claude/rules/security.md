@@ -80,10 +80,21 @@ code.
   `geocode.ts`'s `haversineMiles`. See `.claude/rules/testing.md`. This is
   explicitly a first slice — most pages and components still have zero
   tests, tracked below, not closed.
+- ~~`frontend/`'s `vite@^5.4.0` transitively pulled a vulnerable `esbuild`
+  (GHSA-67mh-4wv8-2f99)~~ — **fixed.** `vite` bumped `^5.4.0` → `^8.2.1`
+  (with `@vitejs/plugin-react` → `^6.0.5` and `vitest`/`@vitest/coverage-v8`
+  → `^4.1.10` to match, all four had to move together — see
+  `.claude/rules/testing.md`). `npm audit` now reports 0 vulnerabilities;
+  Vite 8 doesn't depend on `esbuild` at all anymore (nothing under that
+  name in `node_modules`), not just a patched version of it. Verified the
+  upgrade didn't break anything beyond the version bump itself: full test
+  suite, lint, and build all still pass, and the Docker image (`node:20-
+  alpine`, resolves to Node 20.20.2, above Vite 8's `^20.19.0` floor)
+  builds and serves the app correctly.
 
-Both P0s, the JWT gap, and the backend half of the test-coverage gap were
-tracked in `docs/technical-documentation.html` section 17, now marked
-closed there.
+Both P0s, the JWT gap, the backend half of the test-coverage gap, and the
+`esbuild` finding were tracked in `docs/technical-documentation.html`
+section 17, now marked closed there.
 
 **New trade-off this introduced, tracked as P2 (see below):** the refresh
 token is a plain string in `localStorage`, same as the access token before
@@ -113,21 +124,6 @@ but doesn't stop the theft itself the way an httpOnly cookie would.
   downgraded in urgency from "the runner doesn't even exist" but not
   closed — most of the frontend's actual logic still has no regression
   safety net.
-- `frontend/`'s `vite@^5.4.0` transitively pulls a vulnerable `esbuild`
-  (`npm audit`: GHSA-67mh-4wv8-2f99, moderate — the dev server accepts
-  cross-origin requests and echoes responses back, so any website a
-  developer has open can read what the dev server returns). Predates the
-  frontend-test-tooling work — surfaced by it, since that was the first
-  `npm audit` run this session, not introduced by it. No fix exists within
-  the `vite@5.x`/`6.x` range; `npm audit fix --force` would jump straight
-  to `vite@8`, a 3-major-version bump entirely out of scope for a
-  dependency-hygiene fix, and this project's Docker setup runs the dev
-  server itself (`npm run dev`, not a built-and-served `dist/`) even in
-  its "production-like" container, so the exposure isn't purely local-dev
-  either. Tracked as P2, same reasoning as the other demo-stage gaps above
-  — fine while nothing public depends on this, needs the real Vite
-  major-version upgrade (a separate, deliberate migration) before any
-  public deploy.
 - `POST /api/search` (`core/llm.py`) has no rate limiting, no per-request
   or per-period cost cap, and no auth requirement — once `NL_SEARCH_ENABLED`
   is turned on, anyone can trigger billed Anthropic API calls at will (the

@@ -108,14 +108,16 @@ beyond this is listed in `docs/technical-documentation.html` section 15.
 Vitest + Testing Library (`frontend/vitest.config.ts`, jsdom environment).
 Deliberately a config file separate from `vite.config.ts` — the app's dev/
 build config never has to know about test-only concerns (jsdom, the setup
-file), and vice versa. `vitest@3.x` is pinned rather than latest
-(`vitest@4.x`, whose `dependencies.vite` range is `^6.0.0 || ^7.0.0 ||
-^8.0.0`) specifically because the app itself is still on `vite@^5.4.0` —
-`vitest@4.x` would pull in a second, separate `vite@8` install alongside
-it rather than deduping onto the app's own `vite@5.4.x` (`npm ls vitest
-vite` shows the dedup working correctly with 3.x). Don't bump the `vitest`
-major without bumping the app's own `vite` major in the same change, or
-that duplicate-install problem comes back.
+file), and vice versa. `vitest@4.x` and `vite@8.x` are pinned as a pair —
+`vitest@4.x`'s own `dependencies.vite` range is `^6.0.0 || ^7.0.0 ||
+^8.0.0`, so it only dedupes onto the app's own `vite` install
+(`npm ls vitest vite` should show one `vite` version, not two) when
+they're both on a major within that range; the app was briefly held on
+`vitest@3.x` for exactly this reason while it was still on `vite@^5.4.0`
+(see the `esbuild`/`vite@8` upgrade in tech-debt item 14,
+`docs/technical-documentation.html` section 17 — now closed). Bump these
+two together going forward, not independently, or the duplicate-install
+problem comes back.
 
 ```bash
 cd frontend
