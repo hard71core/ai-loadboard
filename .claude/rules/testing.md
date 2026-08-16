@@ -26,12 +26,15 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-Right now there are three test files: `backend/tests/test_health.py` (a
+Right now there are four test files: `backend/tests/test_health.py` (a
 smoke test), `backend/tests/test_load_ownership.py` (auth/role/ownership
-on the three mutating load endpoints), and `backend/tests/test_search.py`
-(NL search — LLM filter application, keyword fallback when the LLM path is
-unavailable, empty-query rejection) — still nowhere near coverage, just the
-slices that existed reasons to test first. `backend/tests/conftest.py` holds the shared
+on the three mutating load endpoints), `backend/tests/test_search.py`
+(NL search route — LLM filter application, keyword fallback when the LLM
+path is unavailable, empty-query rejection), and `backend/tests/test_llm.py`
+(the `NL_SEARCH_ENABLED` gate itself — asserts the Anthropic client never
+gets constructed when the flag is off or the key is missing, no DB needed)
+— still nowhere near coverage, just the slices that existed reasons to test
+first. `backend/tests/conftest.py` holds the shared
 `register_user(client, role)` helper (extracted out of
 `test_load_ownership.py` once `test_search.py` needed the same setup) — use
 it instead of writing a new inline registration helper. When you add backend

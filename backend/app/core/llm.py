@@ -3,9 +3,10 @@
 Deliberately the only place in the codebase that talks to an LLM provider —
 see docs/technical-documentation.html section 7.8 ("LLM Gateway" as a single
 call point) and section 7 ("a model is never a single point of failure").
-Every call here fails closed: any problem (no key, network error, provider
-outage, a response that doesn't parse) returns None, and the caller treats
-that exactly like "the user didn't specify a filter" rather than an error.
+Every call here fails closed: any problem (feature flag off, no key, network
+error, provider outage, a response that doesn't parse) returns None, and the
+caller treats that exactly like "the user didn't specify a filter" rather
+than an error — see api/routes/search.py's keyword fallback.
 """
 
 import logging
@@ -30,11 +31,23 @@ _SYSTEM_PROMPT = (
 )
 
 
+def _nl_search_enabled() -> bool:
+    return os.getenv("NL_SEARCH_ENABLED", "false").strip().lower() in ("1", "true", "yes")
+
+
 def parse_search_query(query: str) -> SearchFilter | None:
     """Turns free text like "reefer out of Dallas this week under 900" into
-    a SearchFilter. Returns None if the key isn't configured, the API call
-    fails, or the response doesn't validate — callers must fall back to a
-    plain keyword match in every one of those cases, not raise."""
+    a SearchFilter. Returns None if NL_SEARCH_ENABLED isn't turned on, the
+    key isn't configured, the API call fails, or the response doesn't
+    validate — callers must fall back to a plain keyword match in every one
+    of those cases, not raise.
+
+    NL_SEARCH_ENABLED defaults to off: the feature works end-to-end (the
+    keyword fallback), but nothing here spends Anthropic credits until it's
+    deliberately turned on in .env — see .env.example."""
+    if not _nl_search_enabled():
+        return None
+
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key or api_key.startswith("replace-with-"):
         return None

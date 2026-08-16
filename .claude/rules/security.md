@@ -16,7 +16,10 @@ code.
   the `.env.example` placeholder both fall through to `None`, and
   `api/routes/search.py` degrades to a plain keyword match in that case),
   so a missing key is never a reason to hardcode a real one anywhere as a
-  fallback.
+  fallback. On top of that, `NL_SEARCH_ENABLED` (`.env`, default `false`)
+  gates the Anthropic call entirely — `core/llm.py` checks it before even
+  looking at the key, so `POST /api/search` spends zero credits unless
+  someone deliberately opts in.
 - Every mutating endpoint must check authentication **and** ownership before
   this project can be considered production-safe (see "Known gaps" below —
   this isn't true yet for three endpoints).
@@ -57,9 +60,11 @@ closed there.
   and `/api/search` (LLM call mocked) only (`backend/tests/`). No frontend
   tests exist. Tracked as P1.
 - `POST /api/search` (`core/llm.py`) has no rate limiting, no per-request
-  or per-period cost cap, and no auth requirement — anyone can trigger
-  billed Anthropic API calls at will. The "cost budget and circuit
-  breaker" pattern described in `docs/technical-documentation.html`
-  section 7.8 is aspirational, not implemented. Tracked as P2 — real
-  exposure is small while the account has no meaningful traffic, but this
-  needs a fix before any public/high-traffic deploy.
+  or per-period cost cap, and no auth requirement — once `NL_SEARCH_ENABLED`
+  is turned on, anyone can trigger billed Anthropic API calls at will (the
+  flag being off by default only prevents *accidental* spend, it's not a
+  real cost control). The "cost budget and circuit breaker" pattern
+  described in `docs/technical-documentation.html` section 7.8 is
+  aspirational, not implemented. Tracked as P2 — real exposure is small
+  while the account has no meaningful traffic, but this needs a fix before
+  any public/high-traffic deploy.
