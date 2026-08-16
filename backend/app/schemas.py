@@ -12,20 +12,17 @@ class LoadBase(BaseModel):
     equipment_type: str = "Dry Van"
     weight_lbs: int
     price_usd: float
-    shipper_name: str
 
 
 class LoadCreate(LoadBase):
-    pass
-
-
-class AcceptPayload(BaseModel):
-    carrier_name: str
+    """Intentionally has no shipper_name field — the shipper is whoever the
+    bearer token belongs to, not something the client gets to state."""
 
 
 class LoadOut(LoadBase):
     id: int
     status: LoadStatus
+    shipper_name: str
     carrier_name: str | None = None
     created_at: datetime
 
