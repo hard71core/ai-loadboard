@@ -15,6 +15,9 @@ one on); the rest of the AI subsystem described in
 - **Database:** PostgreSQL
 - **AI:** Anthropic Claude (Haiku 4.5, structured outputs) — natural-language load
   search, `backend/app/core/llm.py`
+- **Maps:** Leaflet + CARTO dark tiles, OpenStreetMap Nominatim for geocoding
+  (no API key) — the load detail page's route map,
+  `frontend/src/components/RouteMap.tsx`
 
 ## Setup
 
@@ -107,13 +110,16 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
 - Sign up and log in (email + password, JWT), with a role picked at
   registration: **shipper** or **carrier**
 - List of open loads (route, equipment type, weight, rate, shipper) — click
-  any row to open its detail page (`/loads/:id`)
+  any row to open its detail page (`/loads/:id`), which includes a map with
+  the origin/destination pinned and an approximate (straight-line, not
+  turn-by-turn) route between them — geocoded via OpenStreetMap's Nominatim,
+  no API key needed
 - Natural-language load search (e.g. "reefer out of Dallas under 900") — when
   `NL_SEARCH_ENABLED=true`, Claude Haiku 4.5 turns the query into a
   structured filter; off by default (or if the key is missing or the LLM
   call fails), it's a plain keyword match across
   title/origin/destination/equipment instead
-- "★ Recommended for you" for carriers — ranks open loads against the
+- "Recommended for you" for carriers — ranks open loads against the
   carrier's own history (equipment types and lane states they've run
   before); a carrier with no history yet just sees the newest loads first
 - Posting a new load — available only to authenticated shippers

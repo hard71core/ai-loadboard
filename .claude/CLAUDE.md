@@ -154,8 +154,15 @@ pages/
   LoadDetailPage.tsx  "/loads/:id" — full detail for one load, accept action
 components/
   AuthPanel.tsx       login/register form, used from App's shell
+  RouteMap.tsx        Leaflet map on the detail page — geocodes origin/
+                       destination via geocode.ts, draws a straight-line
+                       "approximate route" (not turn-by-turn), fails
+                       closed to a quiet message on any geocoding error
 AuthContext.tsx     auth state (token/user), localStorage-backed
 api.ts               every backend call in one place
+geocode.ts            the only place that calls a third-party geocoder
+                       (Nominatim, keyless) — see security.md for its
+                       rate-limit caveat
 ```
 `openAuth` (opens the login/register panel) lives in `App.tsx` and is passed
 down as a prop to both pages rather than promoted to context — there are

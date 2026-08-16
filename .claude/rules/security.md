@@ -68,3 +68,11 @@ closed there.
   aspirational, not implemented. Tracked as P2 — real exposure is small
   while the account has no meaningful traffic, but this needs a fix before
   any public/high-traffic deploy.
+- `frontend/src/geocode.ts` calls OpenStreetMap's Nominatim directly from
+  the browser, no key, no backend proxy, no rate limiting beyond an
+  in-memory per-session cache. Nominatim's usage policy caps free use at
+  roughly 1 request/second and expects identifiable traffic; fine at demo
+  scale, but real production traffic needs either a backend proxy with
+  proper caching/throttling or a paid geocoder — Nominatim's operators can
+  and do block abusive IPs. Tracked as P2, same reasoning as the search
+  cost-cap item above.

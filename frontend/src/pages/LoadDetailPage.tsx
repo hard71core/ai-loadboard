@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { acceptLoad, fetchLoad } from "../api";
 import { useAuth } from "../AuthContext";
+import RouteMap from "../components/RouteMap";
 import { STATUS_LABEL } from "../constants";
 import type { Load } from "../types";
 
@@ -93,6 +94,8 @@ export default function LoadDetailPage({ openAuth }: Props) {
             <span className={`badge ${load.status}`}>{STATUS_LABEL[load.status]}</span>
           </div>
           <p className="muted">{load.title}</p>
+
+          <RouteMap origin={load.origin} destination={load.destination} />
 
           <dl className="load-detail-grid">
             <div>
