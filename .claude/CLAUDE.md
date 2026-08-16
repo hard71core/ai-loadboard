@@ -88,13 +88,33 @@ npm run dev      # :5173
 
 ## Architecture
 
+**Backend layout** (`backend/app/`):
+```
+main.py            app wiring only — FastAPI(), CORS, lifespan/seed data,
+                    include_router(...), /api/health
+core/
+  database.py       engine/Session/get_db, loads .env (see below)
+  security.py        JWT + password hashing, get_current_user
+  config.py           CORS_ORIGINS parsing
+api/
+  deps.py             re-exports get_db/get_current_user for routes
+  routes/
+    auth.py            register/login/me
+    loads.py           list/create/accept/complete
+models.py           SQLAlchemy models — flat, no second domain yet to split it by
+schemas.py          Pydantic schemas — flat, same reasoning
+```
+Flat `models.py`/`schemas.py` is deliberate, not an oversight — split them
+(and `api/routes/`) into per-domain packages once a second real domain
+shows up (Matching, Pricing, ... from section 7), not before.
+
 **One `.env` at the repo root is the single source of config**, read three
 different ways:
 - `docker-compose.yml` substitutes `${VAR}` from it directly.
-- The backend loads it via `python-dotenv` in `backend/app/database.py`
-  (`load_dotenv(Path(__file__).resolve().parents[2] / ".env")`) — this runs
-  as an import-time side effect, which is why `auth.py` imports from
-  `database` before reading its own env vars.
+- The backend loads it via `python-dotenv` in `backend/app/core/database.py`
+  (`load_dotenv(Path(__file__).resolve().parents[3] / ".env")`) — this runs
+  as an import-time side effect, which is why `core/security.py` imports
+  from `.database` before reading its own env vars.
 - The frontend's `vite.config.ts` sets `envDir: ".."` so Vite reads the root
   `.env` instead of expecting one inside `frontend/`.
 
@@ -105,9 +125,11 @@ There are **two DB URLs by design**: `DATABASE_URL` (host networking —
 
 **Data model** (`backend/app/models.py`) is intentionally minimal: `users`
 and `loads` only, no migrations — schema is created via
-`Base.metadata.create_all()` in the `lifespan` handler in `main.py`. Known
-ownership/auth gaps in this model are tracked in `.claude/rules/security.md`,
-not repeated here.
+`Base.metadata.create_all()` in the `lifespan` handler in `main.py`. `Load`
+has `shipper_id`/`carrier_id` FKs into `users`, enforced at the API layer
+(`api/routes/loads.py`) — this used to be a P0 gap, now closed. Still-open
+gaps (JWT refresh/revocation, test coverage) are tracked in
+`.claude/rules/security.md`, not repeated here.
 
 **Docs** (`docs/`) hold two long-form specs, each with an HTML source and a
 generated PDF twin:

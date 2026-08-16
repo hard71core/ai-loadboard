@@ -8,13 +8,13 @@ code.
 
 - Secrets live only in `.env` (gitignored). Never commit one, never hardcode
   a real secret as a fallback in code — the one exception is the existing
-  `"dev-secret-change-me"` placeholder default in `backend/app/auth.py`,
+  `"dev-secret-change-me"` placeholder default in `backend/app/core/security.py`,
   which only exists so the demo boots without setup; don't add others like it.
 - Every mutating endpoint must check authentication **and** ownership before
   this project can be considered production-safe (see "Known gaps" below —
   this isn't true yet for three endpoints).
 - CORS stays an explicit allowlist via the `CORS_ORIGINS` env var
-  (`backend/app/main.py`), never `allow_origins=["*"]`.
+  (`backend/app/core/config.py`), never `allow_origins=["*"]`.
 - Queries stay parameterized through the SQLAlchemy ORM — never hand-build
   SQL strings, even for internal/admin tooling.
 - Dependency versions stay within the bounds pinned in
@@ -31,7 +31,7 @@ code.
   don't check authentication or role~~ — **fixed.** All three now require a
   Bearer token, check the caller's role (`shipper`/`carrier`), and
   `complete` additionally checks the caller is the load's shipper or the
-  accepting carrier. See `backend/app/main.py`.
+  accepting carrier. See `backend/app/api/routes/loads.py`.
 - ~~`loads.shipper_name` / `carrier_name` are free-text columns, not foreign
   keys into `users`~~ — **fixed.** `Load` now has `shipper_id`/`carrier_id`
   FKs (`backend/app/models.py`), set server-side from the authenticated
@@ -43,7 +43,7 @@ closed there.
 
 ## Known gaps (still open — don't silently "fix" without flagging)
 
-- Auth (`backend/app/auth.py`) is JWT (HS256, `python-jose`) with no refresh
+- Auth (`backend/app/core/security.py`) is JWT (HS256, `python-jose`) with no refresh
   token and no revocation — a stolen token is valid for the full
   `JWT_EXPIRE_MINUTES` window (7 days by default). Tracked as P1.
 - Backend test coverage is still thin — health check plus loads
