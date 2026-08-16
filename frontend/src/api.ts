@@ -28,6 +28,15 @@ export async function fetchLoads(): Promise<Load[]> {
   return handle<Load[]>(res, "Не вдалося завантажити список вантажів");
 }
 
+export async function searchLoads(query: string): Promise<Load[]> {
+  const res = await fetch(`${API_URL}/api/search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  return handle<Load[]>(res, "Не вдалося виконати пошук");
+}
+
 export async function createLoad(
   payload: LoadCreatePayload,
   token: string,

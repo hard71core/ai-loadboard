@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { acceptLoad, createLoad, fetchLoads } from "./api";
+import { acceptLoad, createLoad, fetchLoads, searchLoads } from "./api";
 import { useAuth } from "./AuthContext";
 import AuthPanel from "./components/AuthPanel";
 import type { Load, LoadCreatePayload, LoadStatus } from "./types";
@@ -47,6 +47,10 @@ export default function App() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchActive, setSearchActive] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -66,6 +70,27 @@ export default function App() {
   function openAuth(mode: "login" | "register") {
     setAuthMode(mode);
     setShowAuth(true);
+  }
+
+  async function handleSearch(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      setLoads(await searchLoads(searchQuery));
+      setSearchActive(true);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function clearSearch() {
+    setSearchQuery("");
+    setSearchActive(false);
+    await loadData();
   }
 
   async function handleCreate(e: FormEvent<HTMLFormElement>) {
@@ -155,8 +180,25 @@ export default function App() {
           </div>
         </div>
 
+        <form className="search-bar" onSubmit={handleSearch}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Пошук: напр. «рефрижератор із Далласа до 900»"
+          />
+          <button className="btn primary" type="submit" disabled={searching}>
+            {searching ? "Шукаємо…" : "Пошук"}
+          </button>
+          {searchActive && (
+            <button className="btn small" type="button" onClick={clearSearch}>
+              Скинути пошук
+            </button>
+          )}
+        </form>
+
         <div className="toolbar">
-          <h2>Доступні вантажі</h2>
+          <h2>{searchActive ? "Результати пошуку" : "Доступні вантажі"}</h2>
           {user?.role === "shipper" && (
             <button className="btn primary" onClick={() => setShowForm((s) => !s)}>
               {showForm ? "Скасувати" : "+ Опублікувати вантаж"}
