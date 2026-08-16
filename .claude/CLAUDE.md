@@ -74,6 +74,17 @@ docker compose up --build   # frontend :5173, API :8001, Swagger :8001/docs
 docker compose down         # add -v to also drop the DB volume
 ```
 
+**After adding/removing a frontend dependency**, plain `--build` isn't
+enough: `frontend`'s `node_modules` is an anonymous volume
+(`docker-compose.yml`'s `- /app/node_modules`, there so the `./frontend:/app`
+bind mount doesn't shadow it with the host's — usually missing —
+`node_modules`), and Compose reuses that volume's existing content across
+recreates even when the image was rebuilt. Symptom: Vite's
+`Failed to resolve import "<package>"` even right after `--build`. Fix:
+`docker compose up -d --build --force-recreate -V frontend` — `-V`
+(`--renew-anon-volumes`) is what actually forces the volume to repopulate
+from the freshly built image.
+
 ### Backend, outside Docker
 
 ```bash
