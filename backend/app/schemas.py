@@ -25,6 +25,7 @@ class LoadOut(LoadBase):
     shipper_name: str
     carrier_name: str | None = None
     created_at: datetime
+    accepted_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,3 +72,21 @@ class SearchFilter(BaseModel):
     price_max: float | None = None
     weight_min: int | None = None
     weight_max: int | None = None
+
+
+class LoadETA(BaseModel):
+    """Response for GET /api/loads/{id}/eta — see core/eta.py for how the
+    numbers are derived and why there's no real confidence interval yet.
+    distance_miles/drive_hours_* are None when live routing data couldn't be
+    fetched at all; eta_earliest/eta_latest are additionally None whenever
+    the load hasn't been accepted yet (no accepted_at to measure from)."""
+
+    load_id: int
+    status: LoadStatus
+    model_version: str = "eta-heuristic-v1"
+    basis: str
+    distance_miles: float | None = None
+    drive_hours_min: float | None = None
+    drive_hours_max: float | None = None
+    eta_earliest: datetime | None = None
+    eta_latest: datetime | None = None

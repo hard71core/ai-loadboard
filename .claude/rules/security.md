@@ -83,3 +83,13 @@ closed there.
   cache pattern. That server is explicitly a demo/showcase for the OSRM
   project, not a production dependency — no uptime or rate guarantee.
   Tracked as P2, same reasoning as the Nominatim item above.
+- `backend/app/core/eta.py` (the ETA MVP, `GET /api/loads/{id}/eta`) also
+  calls Nominatim and OSRM's public demo server — same shape of gap as the
+  two items above, but now server-side traffic too, not just from the
+  browser. It does set a descriptive `User-Agent` on the Nominatim call
+  (server-side requests send no `Referer`, unlike a browser tab) and caches
+  in an in-memory dict for the process's lifetime — a longer-lived, shared
+  cache than the frontend's per-session one, which somewhat reduces request
+  volume, but is still no substitute for real rate limiting or a paid
+  provider before production traffic. Tracked as P2, same reasoning as the
+  two items above.

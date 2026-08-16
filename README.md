@@ -1,11 +1,11 @@
 # AI Loadboard — demo
 
 A freight marketplace demo connecting shippers and carriers directly (no broker).
-A basic transactional scaffold plus two working MVP features from the planned AI
-subsystem — natural-language load search and smart load matching (the matching
-MVP is a deterministic ranking heuristic, not the embeddings/ML model the docs
-describe as the target — there's no real carrier behavior data yet to train
-one on); the rest of the AI subsystem described in
+A basic transactional scaffold plus three working MVP features from the planned AI
+subsystem — natural-language load search, smart load matching, and an arrival-time
+estimate (all three are deterministic heuristics, not the embeddings/ML/telematics
+models the docs describe as the target — there's no real carrier behavior data or
+telematics feed yet to build those on); the rest of the AI subsystem described in
 `docs/technical-documentation.html` is designed but not yet built.
 
 ## Stack
@@ -17,7 +17,9 @@ one on); the rest of the AI subsystem described in
   search, `backend/app/core/llm.py`
 - **Maps:** Leaflet + CARTO Voyager tiles, OpenStreetMap Nominatim for geocoding
   and OSRM for driving routes (no API key for either) — the load detail
-  page's route map, `frontend/src/components/RouteMap.tsx`
+  page's route map, `frontend/src/components/RouteMap.tsx`; the same two
+  providers are also called server-side for the arrival-time estimate,
+  `backend/app/core/eta.py`
 
 ## Setup
 
@@ -129,6 +131,12 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
 - "Accept load" — available only to authenticated carriers; they take the load
   directly, with no broker in between
 - Statuses: Open → Accepted → Completed
+- Once a load is accepted, its detail page shows an "Estimated arrival" panel
+  — an arrival window computed from the acceptance time plus the real
+  driving distance/duration, widened to account for typical rest stops
+  (`GET /api/loads/{id}/eta`, `backend/app/core/eta.py`); degrades to
+  "estimate unavailable" if live routing can't be reached, same fail-closed
+  contract as the map above
 
 Test accounts can be created right in the UI via the "Sign up" button. The
 session token is stored in the browser (localStorage), so the login persists

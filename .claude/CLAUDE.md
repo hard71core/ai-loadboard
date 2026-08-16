@@ -9,19 +9,24 @@ takes it directly — no broker. The backend is a plain FastAPI CRUD service
 (`backend/app/`) over two tables, the frontend is a React SPA (`frontend/`)
 with client-side routing (`react-router-dom`) — a load list at `/` and a
 load detail page at `/loads/:id`, not a single screen anymore.
-**Two of the 7 planned AI features have a working MVP**:
+**Three of the 7 planned AI features have a working MVP**:
 natural-language load search (`POST /api/search`, `core/llm.py`, Claude
 Haiku 4.5, structured outputs, gated off by default behind
-`NL_SEARCH_ENABLED` — see `.claude/rules/security.md`) and smart load
-matching (`GET /api/loads/matches`, `api/routes/matching.py`) — but
-matching's MVP is a **deterministic heuristic**, not the embeddings +
-gradient-boosting model section 7.3 of the tech doc describes as the
-target; there's no real carrier behavior data yet to train anything on.
-The other 5 (pricing, the negotiation agent, trust scoring, document
-intelligence, ETA) plus the full event-driven architecture (a separate
+`NL_SEARCH_ENABLED` — see `.claude/rules/security.md`), smart load
+matching (`GET /api/loads/matches`, `api/routes/matching.py`), and an
+arrival-time estimate (`GET /api/loads/{id}/eta`, `core/eta.py`) — but
+matching's and ETA's MVPs are both **deterministic heuristics**, not the
+embeddings + gradient-boosting model (matching, section 7.3) or the
+telematics/traffic/weather regression (ETA, section 7.7) the tech doc
+describes as the target; there's no real carrier behavior data or
+telematics feed yet to build either on. ETA's heuristic geocodes via
+Nominatim and fetches the real driving distance/duration via OSRM
+server-side, then widens it into a band; see `core/eta.py`'s docstring.
+The other 4 (pricing, the negotiation agent, trust scoring, document
+intelligence) plus the full event-driven architecture (a separate
 service per feature, an event bus) are still a *target design*, documented
 but not built — see "Docs" below before assuming more AI-related code
-exists than these two features, and don't assume "AI feature" implies an
+exists than these three features, and don't assume "AI feature" implies an
 LLM/ML call is actually happening — check the route.
 
 Detailed conventions live in `.claude/rules/`: `code-style.md`, `testing.md`,
@@ -136,6 +141,10 @@ core/
   config.py           CORS_ORIGINS parsing
   llm.py               the only place that calls an LLM provider — see
                         .claude/rules/security.md for its fail-closed contract
+  eta.py                the only backend place that calls Nominatim/OSRM —
+                         geocodes + fetches real driving distance/duration,
+                         widens it into a band; fail-closed like llm.py
+                         (any failure returns None), see its docstring
 api/
   deps.py             re-exports get_db/get_current_user for routes
   routes/
@@ -143,13 +152,18 @@ api/
     loads.py           list/detail/create/accept/complete — the detail
                         route is GET /{load_id:int}; the :int converter is
                         load-bearing, not just typing hygiene, see its
-                        docstring for why (route order vs. matching.py)
+                        docstring for why (route order vs. matching.py);
+                        accept sets loads.accepted_at, the only "transit
+                        started" timestamp eta.py has to work with
     matching.py          smart matching — deterministic ranking heuristic
                           (equipment + lane-state overlap with a carrier's
                           own history), no LLM, no ML model yet
     search.py           NL search — parses via core/llm.py, applies the
                          result as SQLAlchemy filters, same query shape as
                          loads.py's list endpoint when there's no filter
+    eta.py               arrival estimate — deterministic heuristic via
+                          core/eta.py, no auth (public read, like the load
+                          detail route)
 models.py           SQLAlchemy models — flat, no second domain yet to split it by
 schemas.py          Pydantic schemas — flat, same reasoning
 ```
@@ -174,15 +188,22 @@ components/
                        driving route via routing.ts; falls back to a
                        dashed straight line if either call fails, never
                        breaks the page
+  EtaWindow.tsx        "Estimated arrival" panel, accepted/completed loads
+                        only — calls GET /api/loads/{id}/eta (backend's
+                        core/eta.py); renders nothing for an open load,
+                        since RouteMap's own estimate above already covers
+                        plain transit time regardless of status
 AuthContext.tsx     auth state (token/user), localStorage-backed
 api.ts               every backend call in one place
-geocode.ts            the only place that calls a third-party geocoder
-                       (Nominatim, keyless) — see security.md for its
-                       rate-limit caveat
-routing.ts             the only place that calls a third-party router
-                       (OSRM's public demo server, keyless) — same
+geocode.ts            the only frontend place that calls a third-party
+                       geocoder (Nominatim, keyless) — see security.md for
+                       its rate-limit caveat; backend/app/core/eta.py also
+                       calls Nominatim, server-side, for a different reason
+routing.ts             the only frontend place that calls a third-party
+                       router (OSRM's public demo server, keyless) — same
                        fail-closed contract and rate-limit caveat as
-                       geocode.ts, see security.md
+                       geocode.ts, see security.md; core/eta.py also calls
+                       OSRM server-side, same caveat there too
 ```
 `openAuth` (opens the login/register panel) lives in `App.tsx` and is passed
 down as a prop to both pages rather than promoted to context — there are
@@ -223,6 +244,9 @@ fails on "type already exists" if you skip it (see the initial migration
 for the pattern: `sa.Enum(name="...").drop(op.get_bind(), checkfirst=True)`).
 `Load` has `shipper_id`/`carrier_id` FKs into `users`, enforced at the API
 layer (`api/routes/loads.py`) — this used to be a P0 gap, now closed.
+`Load` also has `accepted_at` (nullable, set server-side by `accept_load`)
+— added for the ETA MVP (`core/eta.py`), it's the only "transit started"
+timestamp the system has without a telematics/GPS feed.
 Still-open gaps (JWT refresh/revocation, test coverage) are tracked in
 `.claude/rules/security.md`, not repeated here.
 

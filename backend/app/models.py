@@ -54,3 +54,7 @@ class Load(Base):
 
     status = Column(SAEnum(LoadStatus), nullable=False, default=LoadStatus.open)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Set server-side by accept_load() the moment a carrier takes the load —
+    # the ETA estimate (api/routes/eta.py) has no other notion of "when did
+    # transit start", since there's no telematics/GPS feed yet.
+    accepted_at = Column(DateTime(timezone=True), nullable=True)

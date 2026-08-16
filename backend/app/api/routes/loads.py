@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -65,6 +67,7 @@ def accept_load(
     load.carrier_id = current_user.id
     load.carrier_name = current_user.company_name
     load.status = models.LoadStatus.accepted
+    load.accepted_at = datetime.now(UTC)
     db.commit()
     db.refresh(load)
     return load

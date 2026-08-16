@@ -12,6 +12,23 @@ export interface Load {
   carrier_name: string | null;
   status: LoadStatus;
   created_at: string;
+  accepted_at: string | null;
+}
+
+/** GET /api/loads/:id/eta — see backend/app/core/eta.py for how these
+numbers are derived. distance_miles/drive_hours_* are null when live
+routing data couldn't be fetched at all; eta_earliest/eta_latest are
+additionally null whenever the load hasn't been accepted yet. */
+export interface LoadETA {
+  load_id: number;
+  status: LoadStatus;
+  model_version: string;
+  basis: string;
+  distance_miles: number | null;
+  drive_hours_min: number | null;
+  drive_hours_max: number | null;
+  eta_earliest: string | null;
+  eta_latest: string | null;
 }
 
 export interface LoadCreatePayload {

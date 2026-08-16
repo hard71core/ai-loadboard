@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import models
-from .api.routes import auth, loads, matching, search
+from .api.routes import auth, eta, loads, matching, search
 from .core.config import get_cors_origins
 from .core.database import get_db
 
@@ -40,6 +40,7 @@ app.include_router(auth.router)
 app.include_router(loads.router)
 app.include_router(matching.router)
 app.include_router(search.router)
+app.include_router(eta.router)
 
 # Demo seed data: a handful of loads posted directly by shippers, waiting to be
 # matched with a carrier — no broker in between.

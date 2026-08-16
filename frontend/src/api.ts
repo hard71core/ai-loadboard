@@ -2,6 +2,7 @@ import type {
   AuthResponse,
   Load,
   LoadCreatePayload,
+  LoadETA,
   LoginPayload,
   RegisterPayload,
   User,
@@ -40,6 +41,11 @@ export async function searchLoads(query: string): Promise<Load[]> {
     body: JSON.stringify({ query }),
   });
   return handle<Load[]>(res, "Search failed");
+}
+
+export async function fetchLoadEta(id: number): Promise<LoadETA> {
+  const res = await fetch(`${API_URL}/api/loads/${id}/eta`);
+  return handle<LoadETA>(res, "Failed to load the arrival estimate");
 }
 
 export async function fetchMatches(token: string): Promise<Load[]> {

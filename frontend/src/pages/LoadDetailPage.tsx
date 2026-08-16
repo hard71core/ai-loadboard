@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { acceptLoad, fetchLoad } from "../api";
 import { useAuth } from "../AuthContext";
+import EtaWindow from "../components/EtaWindow";
 import RouteMap from "../components/RouteMap";
 import { STATUS_LABEL } from "../constants";
 import type { Load } from "../types";
@@ -96,6 +97,7 @@ export default function LoadDetailPage({ openAuth }: Props) {
           <p className="muted">{load.title}</p>
 
           <RouteMap origin={load.origin} destination={load.destination} />
+          <EtaWindow load={load} />
 
           <dl className="load-detail-grid">
             <div>

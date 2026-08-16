@@ -339,7 +339,7 @@
       <p class="subtitle">Архітектура системи, доменна модель, AI-підсистема та інженерні рішення — від того, що вже працює, до того, що спроєктовано на масштаб.</p>
       <div class="meta-row">
         <span>Версія документа <b>0.1</b></span>
-        <span>Дата <b>15.08.2026</b></span>
+        <span>Дата <b>16.08.2026</b></span>
         <span>Статус продукту <b>MVP / демо</b></span>
         <span>Повʼязаний документ <b>Project Overview (для інвесторів)</b></span>
       </div>
@@ -497,6 +497,7 @@
           <tr><td>Kafka / Redis Streams</td><td>Шина подій між Core і AI-сервісами</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
           <tr><td>S3-сумісне обʼєктне сховище</td><td>Зберігання документів (BOL/POD/rate confirmation)</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
           <tr><td>Alembic</td><td>Міграції схеми БД — застосовуються перед стартом застосунку (<code>backend/entrypoint.sh</code> у Docker, CI-крок, автотест-фікстура), не самим застосунком</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>httpx</td><td>Синхронні HTTP-виклики до Nominatim/OSRM з бекенда — ETA MVP (<code>core/eta.py</code>, розділ 7.7)</td><td><span class="pill pill--done">MVP</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -544,11 +545,12 @@ loads(id, title, origin, destination, equipment_type DEFAULT 'Dry Van',
       weight_lbs, price_usd NUMERIC(10,2),
       shipper_id FK→users NULLABLE, carrier_id FK→users NULLABLE,
       shipper_name, carrier_name NULLABLE,
-      status ENUM(open|accepted|completed), created_at)</code></pre>
+      status ENUM(open|accepted|completed), created_at, accepted_at NULLABLE)</code></pre>
 
     <div class="note">
       <strong>Вирішено (достроково, ще у Фазі MVP):</strong> <code>loads</code> тепер має <code>shipper_id</code>/<code>carrier_id</code> як FK на <code>users</code> — вантаж пов'язаний з автентифікованим користувачем, який його опублікував чи взяв, і саме на це посилання спираються перевірки власності на рівні API (розділ 8). <code>shipper_name</code>/<code>carrier_name</code> лишаються — це денормалізований кеш для відображення, тепер завжди встановлюється сервером із <code>company_name</code> власника, а не клієнтом. Було P0 у розділі 17, тепер закрито.
     </div>
+    <p><code>accepted_at</code> (nullable, встановлюється сервером у <code>accept_load</code>) додано для ETA MVP (розділ 7.7) — це єдина точка відліку "початку рейсу", яку сьогодні має система, за відсутності телематики чи GPS перевізника.</p>
 
     <h3>Цільова схема (Фаза 2–3)</h3>
     <p>Розширення додає компанії (для trust-скорингу й MC/DOT-номерів), офери та історію переговорів, документи з результатами розпізнавання, знімки прогнозів ставки:</p>
@@ -626,7 +628,7 @@ CREATE TABLE documents (
           <tr><td>Trust Service</td><td>Скоринг надійності контрагента, флаги подвійного брокериджу</td><td>Табличний класифікатор + зовнішні перевірки (FMCSA, страхові)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Document Intelligence Service</td><td>OCR і структурування BOL/POD/rate confirmation</td><td>OCR + layout-модель + LLM-екстракція (розділ 7.2)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Search Service</td><td>Пошук вантажів природною мовою</td><td>LLM parsing (<code>POST /api/search</code>, розділ 7.6) → структурований фільтр; векторний пошук ще не реалізовано</td><td><span class="pill pill--done">MVP</span></td></tr>
-          <tr><td>ETA Service</td><td>Оцінка часу прибуття з урахуванням трафіку/погоди/HOS</td><td>Регресія + телематика/трафік API</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>ETA Service</td><td>Оцінка часу прибуття</td><td>MVP: детерміністична евристика на реальній відстані/тривалості через Nominatim+OSRM (розділ 7.7); регресія на телематиці/трафіку/погоді — ціль</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Notification Service</td><td>Push/email/SMS про зміну статусу вантажу, нові офери</td><td>WebSocket + черга задач</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
         </tbody>
       </table>
@@ -647,7 +649,7 @@ CREATE TABLE documents (
           <tr><td>Скоринг надійності</td><td>Табличний класифікатор + правила</td><td>Історія платежів, FMCSA-дані, страхові документи, флаги шахрайства</td><td>Так — низький скор блокує авто-матчинг, потребує ручного review</td></tr>
           <tr><td>Автоматизація документів</td><td>OCR + LLM-екстракція</td><td>Скан/фото BOL, POD, rate confirmation</td><td>Так — нижче порогу впевненості (розділ 7.2)</td></tr>
           <tr><td>Пошук природною мовою <span class="pill pill--done">MVP</span></td><td>LLM parsing → структурований фільтр (векторний пошук — заплановано)</td><td>Вільний текстовий запит користувача</td><td>Ні — детерміністичний фолбек на пошук за ключовими словами</td></tr>
-          <tr><td>Прогноз ETA</td><td>Регресія на телематиці/трафіку</td><td>GPS перевізника, трафік, погода, HOS-ліміти водія</td><td>Ні</td></tr>
+          <tr><td>Прогноз ETA <span class="pill pill--done">MVP</span></td><td>MVP: детерміністична евристика на реальній відстані/тривалості (регресія на телематиці/трафіку/погоді — ціль)</td><td>Реальна відстань/тривалість (Nominatim+OSRM), <code>accepted_at</code></td><td>Ні</td></tr>
         </tbody>
       </table>
     </div>
@@ -740,8 +742,9 @@ CREATE TABLE documents (
         <p><strong>Реалізовано:</strong> <code>POST /api/search</code> (<code>core/llm.py</code>) шле запит у Claude Haiku 4.5 через <code>messages.parse()</code> зі структурованим виходом (<code>SearchFilter</code>: origin/destination/equipment_type/price_max/weight_min/weight_max), результат застосовується як звичайні SQLAlchemy-фільтри поверх <code>loads</code>. Векторний пошук за смисловою близькістю (embeddings) — ще не реалізовано, лишається ціллю Фази 2/3. Сам виклик до LLM вимкнений за замовчуванням прапорцем <code>NL_SEARCH_ENABLED=false</code> у <code>.env</code> — щоб не витрачати кредити Anthropic, поки хтось свідомо не увімкне; <code>core/llm.py</code> перевіряє цей прапорець ще до звернення до ключа. Якщо прапорець вимкнено, ключ <code>ANTHROPIC_API_KEY</code> відсутній, виклик до Anthropic падає або на акаунті скінчились кредити — фолбек не «форма з фільтрами» і не нефільтрований список, а простий пошук за ключовими словами (<code>_keyword_filter</code>): кожне слово запиту через <code>ILIKE</code> має збігтися хоч в одній із колонок title/origin/destination/equipment_type; ендпоінт ніколи не повертає помилку через відмову LLM і завжди хоч якось фільтрує.</p>
       </div>
       <div class="card">
-        <h5>ETA (7.7)</h5>
-        <p>Регресія поверх GPS-телематики перевізника (де є доступ), трафіку, погоди і залишку годин водіння (HOS) — точність деградує пояснено (ширший інтервал), якщо телематика недоступна, а не мовчки.</p>
+        <h5>ETA (7.7) <span class="pill pill--done">MVP</span></h5>
+        <p><strong>Реалізовано:</strong> <code>GET /api/loads/{id}/eta</code> (<code>core/eta.py</code>) — детерміністична евристика, без ML-моделі. Геокодує origin/destination через Nominatim, отримує реальну відстань і тривалість руху через OSRM (ті самі провайдери, що й карта на фронтенді, тут викликаються з бекенда), і розширює звичайну (легковою) тривалість OSRM у діапазон <code>[drive_hours_min, drive_hours_max]</code> (×1.3) — наближення для типових обов'язкових зупинок на відпочинок під час далекого рейсу. Коли перевізник бере вантаж (<code>loads.accepted_at</code>, встановлюється сервером у <code>accept_load</code>), ендпоінт додає цей діапазон до <code>accepted_at</code> і повертає вікно прибуття (<code>eta_earliest</code>/<code>eta_latest</code>); до прийняття — лише оцінку часу в дорозі, бо немає точки відліку відправлення. На сторінці деталей вантажу відображається як панель «Estimated arrival» після прийняття вантажу.</p>
+        <p><strong>Чому не справжня модель одразу:</strong> цільова модель потребує GPS-телематики перевізника, живого трафіку й погоди — нічого з цього в демо немає. Той самий принцип, що й у Matching (7.3) та NL Search (7.6): спершу детерміністична версія, що дає реальну користь сьогодні.</p>
       </div>
       <div class="card">
         <h5>Спільне для всіх</h5>
@@ -785,6 +788,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Позначити завершеним — лише shipper вантажу або carrier, що його взяв</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Пошук вантажів природною мовою — LLM-парсинг у фільтр (розділ 7.6), фолбек на пошук за ключовими словами</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads/matches</code></td><td>Розумний підбір вантажу — детерміністична евристика під історію перевізника (розділ 7.3)</td><td>Bearer, роль <code>carrier</code></td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/eta</code></td><td>Прогноз часу прибуття — детерміністична евристика на реальній відстані/тривалості (розділ 7.7)</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
@@ -799,7 +803,6 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Контрпропозиція</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/companies/{id}/trust-score</code></td><td>Скор надійності з поясненими факторами</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/documents</code></td><td>Завантажити BOL/POD/rate confirmation</td></tr>
-          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/eta</code></td><td>Прогноз часу прибуття</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Оновити access-токен за refresh-токеном</td></tr>
           <tr><td><code>WS</code></td><td><code>/ws/notifications</code></td><td>Realtime-сповіщення: нові офери, зміни статусу</td></tr>
         </tbody>
@@ -921,7 +924,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів, <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>), <code>GET /api/loads/matches</code> (ранжування, роль, холодний старт) і <code>GET /api/loads/{id}</code> (деталі, 404, регресійний тест на те, що <code>{load_id:int}</code> не "проковтує" <code>/matches</code>). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
+    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів, <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>), <code>GET /api/loads/matches</code> (ранжування, роль, холодний старт), <code>GET /api/loads/{id}</code> (деталі, 404, регресійний тест на те, що <code>{load_id:int}</code> не "проковтує" <code>/matches</code>) і <code>GET /api/loads/{id}/eta</code> (виклик Nominatim/OSRM мокається так само, як Anthropic у тестах пошуку — 404, деградація при недоступному роутингу, вікно прибуття лише для прийнятих вантажів). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
 
     <!-- 16 -->
     <h2 id="s16"><span class="num">16</span>Технічна дорожня карта</h2>
@@ -949,12 +952,13 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT без refresh і без відкликання, дефолтний секрет у коді</td><td>Вкрадений токен дійсний до 7 днів; ризик при випадковому деплої з дефолтним <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td><s>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</s> — закрито: Alembic (<code>backend/migrations/</code>), застосовується перед стартом застосунку в усіх середовищах (розділ 4)</td><td>Було: немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--done">Закрито</span></td></tr>
-          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code>, <code>/api/search</code>, <code>/api/loads/matches</code> і <code>GET /api/loads/{id}</code> (20 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code>, <code>/api/search</code>, <code>/api/loads/matches</code>, <code>GET /api/loads/{id}</code> і <code>GET /api/loads/{id}/eta</code> (24 тести); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>Немає rate limiting на <code>/api/auth/*</code></td><td>Вразливість до brute-force підбору пароля</td><td><span class="pill pill--risk">P2</span></td></tr>
-          <tr><td>8</td><td>5 із 7 AI-сервісів — поки що специфікація, не код (реалізовано NL Search і Matching MVP, розділи 7.3/7.6 — обидва детерміністичні, без ML/embeddings)</td><td>Основна цінність продукту для інвестора здебільшого ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
+          <tr><td>8</td><td>4 із 7 AI-сервісів — поки що специфікація, не код (реалізовано NL Search, Matching і ETA MVP, розділи 7.3/7.6/7.7 — усі три детерміністичні, без ML/embeddings)</td><td>Основна цінність продукту для інвестора здебільшого ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> без rate limiting і без per-request/per-period cost cap на виклики Anthropic (розділ 7.8 — «circuit breaker» ще не реалізовано)</td><td>Будь-хто без автентифікації може ініціювати необмежену кількість платних LLM-викликів</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>10</td><td><code>frontend/src/geocode.ts</code> викликає Nominatim напряму з браузера, без бекенд-проксі й без rate limiting поза кешем в пам'яті на сесію — політика Nominatim обмежує безкоштовне використання ~1 запитом/сек</td><td>Реальний продакшн-трафік ризикує блокуванням IP з боку Nominatim</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>11</td><td><code>frontend/src/routing.ts</code> викликає публічний demo-сервер OSRM напряму з браузера — той самий тип обмеження, що й пункт 10: без бекенд-проксі, без rate limiting поза кешем у сесії; сервер офіційно не призначений для продакшн-навантаження</td><td>Немає SLA/гарантії доступності для реального трафіку</td><td><span class="pill pill--risk">P2</span></td></tr>
+          <tr><td>12</td><td><code>backend/app/core/eta.py</code> також викликає Nominatim і публічний demo-сервер OSRM напряму (з бекенда, для ETA MVP, розділ 7.7) — той самий тип обмеження, що й пункти 10–11, але тепер і серверний трафік; кеш у пам'яті процесу (не за сесію) частково пом'якшує навантаження на ці сервіси, але не є заміною реальному rate limiting чи платному провайдеру</td><td>Той самий ризик блокування/відсутності SLA, тепер із серверного, а не лише клієнтського боку</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -962,7 +966,7 @@ CREATE TABLE documents (
 
     <footer class="doc-footer">
       <span>AI Loadboard · Технічна документація v0.1</span>
-      <span>15.08.2026</span>
+      <span>16.08.2026</span>
     </footer>
 
   </main>
@@ -1010,7 +1014,7 @@ CREATE TABLE documents (
       <p class="subtitle">System architecture, data model, AI subsystem, and engineering decisions — from what's already running to what's designed for scale.</p>
       <div class="meta-row">
         <span>Document version <b>0.1</b></span>
-        <span>Date <b>2026-08-15</b></span>
+        <span>Date <b>2026-08-16</b></span>
         <span>Product status <b>MVP / demo</b></span>
         <span>Related document <b>Project Overview (for investors)</b></span>
       </div>
@@ -1167,6 +1171,7 @@ CREATE TABLE documents (
           <tr><td>Kafka / Redis Streams</td><td>Event bus between Core and the AI services</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
           <tr><td>S3-compatible object storage</td><td>Document storage (BOL/POD/rate confirmation)</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
           <tr><td>Alembic</td><td>DB schema migrations — applied before the app starts (<code>backend/entrypoint.sh</code> in Docker, a CI step, a test fixture), not by the app itself</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>httpx</td><td>Synchronous HTTP calls to Nominatim/OSRM from the backend — ETA MVP (<code>core/eta.py</code>, section 7.7)</td><td><span class="pill pill--done">MVP</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -1214,11 +1219,12 @@ loads(id, title, origin, destination, equipment_type DEFAULT 'Dry Van',
       weight_lbs, price_usd NUMERIC(10,2),
       shipper_id FK→users NULLABLE, carrier_id FK→users NULLABLE,
       shipper_name, carrier_name NULLABLE,
-      status ENUM(open|accepted|completed), created_at)</code></pre>
+      status ENUM(open|accepted|completed), created_at, accepted_at NULLABLE)</code></pre>
 
     <div class="note">
       <strong>Resolved (ahead of schedule, still within the MVP phase):</strong> <code>loads</code> now has <code>shipper_id</code>/<code>carrier_id</code> as FKs into <code>users</code> — a load is tied to the authenticated user who posted or took it, and API-level ownership checks (section 8) rely on exactly that link. <code>shipper_name</code>/<code>carrier_name</code> stay as a denormalized display cache, now always set server-side from the owner's <code>company_name</code> rather than by the client. Was P0 in section 17, now closed.
     </div>
+    <p><code>accepted_at</code> (nullable, set server-side by <code>accept_load</code>) was added for the ETA MVP (section 7.7) — it's the only notion of "transit started" the system has today, with no telematics or carrier GPS feed to draw one from instead.</p>
 
     <h3>Target schema (Phase 2–3)</h3>
     <p>The extension adds companies (for trust scoring and MC/DOT numbers), offers and negotiation history, documents with extraction results, and market-rate forecast snapshots:</p>
@@ -1296,7 +1302,7 @@ CREATE TABLE documents (
           <tr><td>Trust Service</td><td>Counterparty trust scoring, double-brokerage flags</td><td>Tabular classifier + external checks (FMCSA, insurance)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Document Intelligence Service</td><td>OCR and structuring of BOL/POD/rate confirmation</td><td>OCR + layout model + LLM extraction (section 7.2)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Search Service</td><td>Natural-language load search</td><td>LLM parsing (<code>POST /api/search</code>, section 7.6) → structured filter; vector search not yet built</td><td><span class="pill pill--done">MVP</span></td></tr>
-          <tr><td>ETA Service</td><td>Arrival-time estimate accounting for traffic/weather/HOS</td><td>Regression + telematics/traffic API</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>ETA Service</td><td>Arrival-time estimate</td><td>MVP: deterministic heuristic on real distance/duration via Nominatim+OSRM (section 7.7); regression on telematics/traffic/weather is the target</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Notification Service</td><td>Push/email/SMS for load status changes, new offers</td><td>WebSocket + task queue</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
         </tbody>
       </table>
@@ -1317,7 +1323,7 @@ CREATE TABLE documents (
           <tr><td>Trust scoring</td><td>Tabular classifier + rules</td><td>Payment history, FMCSA data, insurance documents, fraud flags</td><td>Yes — a low score blocks auto-matching, needs manual review</td></tr>
           <tr><td>Document automation</td><td>OCR + LLM extraction</td><td>Scanned/photographed BOL, POD, rate confirmation</td><td>Yes — below the confidence threshold (section 7.2)</td></tr>
           <tr><td>Natural-language search <span class="pill pill--done">MVP</span></td><td>LLM parsing → structured filter (vector search — planned)</td><td>Free-text user query</td><td>No — deterministic fallback to a keyword match</td></tr>
-          <tr><td>ETA forecast</td><td>Regression on telematics/traffic</td><td>Carrier GPS, traffic, weather, driver HOS limits</td><td>No</td></tr>
+          <tr><td>ETA forecast <span class="pill pill--done">MVP</span></td><td>MVP: deterministic heuristic on real distance/duration (regression on telematics/traffic/weather is the target)</td><td>Real distance/duration (Nominatim+OSRM), <code>accepted_at</code></td><td>No</td></tr>
         </tbody>
       </table>
     </div>
@@ -1410,8 +1416,9 @@ CREATE TABLE documents (
         <p><strong>Shipped:</strong> <code>POST /api/search</code> (<code>core/llm.py</code>) calls Claude Haiku 4.5 via <code>messages.parse()</code> with a structured output (<code>SearchFilter</code>: origin/destination/equipment_type/price_max/weight_min/weight_max), and the result is applied as ordinary SQLAlchemy filters over <code>loads</code>. Vector search by semantic closeness (embeddings) isn't built yet — still a Phase 2/3 target. The LLM call itself is off by default behind a <code>NL_SEARCH_ENABLED=false</code> flag in <code>.env</code> — so it never spends Anthropic credits until someone deliberately turns it on; <code>core/llm.py</code> checks the flag before it even looks at the key. If the flag is off, <code>ANTHROPIC_API_KEY</code> is missing, the Anthropic call fails, or the account is out of credit, the fallback is neither a "filter form" nor the unfiltered list — it's a plain keyword match (<code>_keyword_filter</code>): every word in the query must <code>ILIKE</code>-match at least one of title/origin/destination/equipment_type; the endpoint never errors out on an LLM failure and always filters something.</p>
       </div>
       <div class="card">
-        <h5>ETA (7.7)</h5>
-        <p>Regression on top of the carrier's GPS telematics (where available), traffic, weather, and remaining drive-time (HOS) — accuracy degrades transparently (a wider interval) when telematics isn't available, rather than silently.</p>
+        <h5>ETA (7.7) <span class="pill pill--done">MVP</span></h5>
+        <p><strong>Shipped:</strong> <code>GET /api/loads/{id}/eta</code> (<code>core/eta.py</code>) — a deterministic heuristic, no ML model. Geocodes origin/destination via Nominatim, fetches the real driving distance/duration via OSRM (same providers as the frontend's map, called server-side here), and widens OSRM's plain car-profile duration into a <code>[drive_hours_min, drive_hours_max]</code> band (×1.3) — a stand-in for typical mandatory rest stops on a long haul. Once a carrier accepts a load (<code>loads.accepted_at</code>, set server-side by <code>accept_load</code>), the endpoint adds that band to <code>accepted_at</code> and returns an arrival window (<code>eta_earliest</code>/<code>eta_latest</code>); before acceptance it returns the transit-time estimate only, since there's no departure time to anchor a window to. Surfaced on the load detail page as an "Estimated arrival" panel once a load is accepted.</p>
+        <p><strong>Why not the real model yet:</strong> the target model needs carrier GPS telematics, live traffic, and weather — none of which exist in this demo. Same principle as Matching (7.3) and NL Search (7.6): ship the deterministic version that's actually useful today.</p>
       </div>
       <div class="card">
         <h5>Common to all</h5>
@@ -1455,6 +1462,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Mark completed — only the load's shipper or the carrier who took it</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Natural-language load search — LLM parsing into a filter (section 7.6), falls back to a keyword match</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads/matches</code></td><td>Smart load matching — deterministic heuristic against the carrier's history (section 7.3)</td><td>Bearer, <code>carrier</code> role</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/eta</code></td><td>Arrival time estimate — deterministic heuristic on real distance/duration (section 7.7)</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
@@ -1469,7 +1477,6 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Counter-offer</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/companies/{id}/trust-score</code></td><td>Trust score with explained factors</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/documents</code></td><td>Upload BOL/POD/rate confirmation</td></tr>
-          <tr><td><code>GET</code></td><td><code>/api/loads/{id}/eta</code></td><td>Arrival time estimate</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Refresh the access token</td></tr>
           <tr><td><code>WS</code></td><td><code>/ws/notifications</code></td><td>Realtime notifications: new offers, status changes</td></tr>
         </tbody>
@@ -1591,7 +1598,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed), <code>GET /api/loads/matches</code> (ranking, role gating, cold start), and <code>GET /api/loads/{id}</code> (detail, 404, a regression test that <code>{load_id:int}</code> doesn't swallow <code>/matches</code>). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
+    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed), <code>GET /api/loads/matches</code> (ranking, role gating, cold start), <code>GET /api/loads/{id}</code> (detail, 404, a regression test that <code>{load_id:int}</code> doesn't swallow <code>/matches</code>), and <code>GET /api/loads/{id}/eta</code> (the Nominatim/OSRM call is mocked the same way as the Anthropic call in the search tests — 404, graceful degradation when routing is unavailable, arrival window only for accepted loads). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
 
     <!-- 16 -->
     <h2 id="s16-en"><span class="num">16</span>Technical roadmap</h2>
@@ -1619,12 +1626,13 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT has no refresh and no revocation, default secret in code</td><td>A stolen token stays valid for up to 7 days; risk if a build ever ships with the default <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td><s>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</s> — closed: Alembic (<code>backend/migrations/</code>), applied before the app starts in every environment (section 4)</td><td>Was: no managed path for evolving the schema against production data</td><td><span class="pill pill--done">Closed</span></td></tr>
-          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, <code>/api/search</code>, <code>/api/loads/matches</code>, and <code>GET /api/loads/{id}</code> (20 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, <code>/api/search</code>, <code>/api/loads/matches</code>, <code>GET /api/loads/{id}</code>, and <code>GET /api/loads/{id}/eta</code> (24 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>No rate limiting on <code>/api/auth/*</code></td><td>Vulnerable to password brute-forcing</td><td><span class="pill pill--risk">P2</span></td></tr>
-          <tr><td>8</td><td>5 of 7 AI services are still a spec, not code (NL Search and Matching MVP are built, sections 7.3/7.6 — both deterministic, no ML/embeddings)</td><td>Most of the core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
+          <tr><td>8</td><td>4 of 7 AI services are still a spec, not code (NL Search, Matching, and ETA MVP are built, sections 7.3/7.6/7.7 — all three deterministic, no ML/embeddings)</td><td>Most of the core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> has no rate limiting and no per-request/per-period cost cap on Anthropic calls (section 7.8's "circuit breaker" isn't built yet)</td><td>Anyone, unauthenticated, can trigger unlimited billed LLM calls</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>10</td><td><code>frontend/src/geocode.ts</code> calls Nominatim directly from the browser, no backend proxy, no rate limiting beyond an in-memory per-session cache — Nominatim's usage policy caps free use at roughly 1 request/second</td><td>Real production traffic risks getting the IP blocked by Nominatim</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>11</td><td><code>frontend/src/routing.ts</code> calls OSRM's public demo server directly from the browser — same shape of gap as item 10: no backend proxy, no rate limiting beyond an in-memory session cache; the server isn't meant for production traffic</td><td>No SLA/availability guarantee for real traffic</td><td><span class="pill pill--risk">P2</span></td></tr>
+          <tr><td>12</td><td><code>backend/app/core/eta.py</code> also calls Nominatim and OSRM's public demo server directly (from the backend now, for the ETA MVP, section 7.7) — same shape of gap as items 10–11, but now server-side traffic too; a process-lifetime in-memory cache (not per-session) softens the load somewhat but is no substitute for real rate limiting or a paid provider</td><td>Same blocking/no-SLA risk as items 10–11, now from the server side as well as the client</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -1632,7 +1640,7 @@ CREATE TABLE documents (
 
     <footer class="doc-footer">
       <span>AI Loadboard · Technical Documentation v0.1</span>
-      <span>2026-08-15</span>
+      <span>2026-08-16</span>
     </footer>
 
   </main>

@@ -901,6 +901,35 @@ its own panel rather than as a map label. */
   height: 18px;
 }
 
+/* ---------- ETA window ---------- */
+
+/* Its own panel, distinct from .route-estimate above — that one shows
+transit time for any load regardless of status; this one only appears once
+a load's accepted and there's an accepted_at to anchor an arrival window
+to, tinted with the "accepted" status color to tie the two visually. */
+.eta-window {
+  margin-top: 10px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accepted);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eta-window-unavailable {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted-2);
+}
+
+.eta-window-caption {
+  margin: 2px 0 0;
+}
+
 .route-marker span {
   display: block;
   width: 14px;
