@@ -502,8 +502,9 @@
       <table>
         <thead><tr><th>Технологія</th><th>Роль</th><th>Статус</th></tr></thead>
         <tbody>
+          <tr><td>Claude Haiku 4.5 (structured outputs)</td><td>Екстракція структурованого фільтра з вільного текстового запиту — NL Search (розділ 7.6)</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>LLM Gateway (LiteLLM-подібний шар)</td><td>Єдина точка виклику моделей різних провайдерів, з фолбеком і лічильником вартості</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
-          <tr><td>Claude / GPT-клас моделей (function calling)</td><td>Negotiation Agent, NL Search, структурування документів</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Claude / GPT-клас моделей (function calling)</td><td>Negotiation Agent, структурування документів</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Sentence-embedding модель (напр. клас <code>bge</code>/<code>e5</code>)</td><td>Векторизація вантажів і запитів для матчингу й пошуку</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Gradient boosting (LightGBM/XGBoost)</td><td>Прогноз ринкової ставки, ETA, trust-скоринг — табличні дані, пояснюваність важливіша за глибокі мережі</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>OCR + layout-модель (напр. клас LayoutLM/Textract)</td><td>Розпізнавання BOL/POD/rate confirmation</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
@@ -620,7 +621,7 @@ CREATE TABLE documents (
           <tr><td>Negotiation Service</td><td>LLM-агент, що веде першу комунікацію й торгується в заданих межах</td><td>LLM function calling + guardrails (розділ 7.1)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Trust Service</td><td>Скоринг надійності контрагента, флаги подвійного брокериджу</td><td>Табличний класифікатор + зовнішні перевірки (FMCSA, страхові)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Document Intelligence Service</td><td>OCR і структурування BOL/POD/rate confirmation</td><td>OCR + layout-модель + LLM-екстракція (розділ 7.2)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
-          <tr><td>Search Service</td><td>Пошук вантажів природною мовою</td><td>LLM parsing → структурований фільтр + векторний пошук</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Search Service</td><td>Пошук вантажів природною мовою</td><td>LLM parsing (<code>POST /api/search</code>, розділ 7.6) → структурований фільтр; векторний пошук ще не реалізовано</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>ETA Service</td><td>Оцінка часу прибуття з урахуванням трафіку/погоди/HOS</td><td>Регресія + телематика/трафік API</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Notification Service</td><td>Push/email/SMS про зміну статусу вантажу, нові офери</td><td>WebSocket + черга задач</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
         </tbody>
@@ -641,7 +642,7 @@ CREATE TABLE documents (
           <tr><td>AI-асистент переговорів</td><td>LLM-агент із function calling</td><td>Межі ціни від shipper, історія лейну, повідомлення контрагента</td><td>Так — ескалація за межами довіри (розділ 7.1)</td></tr>
           <tr><td>Скоринг надійності</td><td>Табличний класифікатор + правила</td><td>Історія платежів, FMCSA-дані, страхові документи, флаги шахрайства</td><td>Так — низький скор блокує авто-матчинг, потребує ручного review</td></tr>
           <tr><td>Автоматизація документів</td><td>OCR + LLM-екстракція</td><td>Скан/фото BOL, POD, rate confirmation</td><td>Так — нижче порогу впевненості (розділ 7.2)</td></tr>
-          <tr><td>Пошук природною мовою</td><td>LLM parsing → фільтр + векторний пошук</td><td>Вільний текстовий запит користувача</td><td>Ні — детерміністичний фолбек на форму-фільтр</td></tr>
+          <tr><td>Пошук природною мовою <span class="pill pill--done">MVP</span></td><td>LLM parsing → структурований фільтр (векторний пошук — заплановано)</td><td>Вільний текстовий запит користувача</td><td>Ні — детерміністичний фолбек на нефільтрований список вантажів</td></tr>
           <tr><td>Прогноз ETA</td><td>Регресія на телематиці/трафіку</td><td>GPS перевізника, трафік, погода, HOS-ліміти водія</td><td>Ні</td></tr>
         </tbody>
       </table>
@@ -727,8 +728,8 @@ CREATE TABLE documents (
         <p>0–100 з поясненими факторами (JSONB <code>factors</code>), не «чорна скринька» — перевізник/shipper бачить, чому скор такий, і може оскаржити. Низький скор не банить автоматично, а знижує пріоритет у матчингу і додає попередження.</p>
       </div>
       <div class="card">
-        <h5>NL Search (7.6)</h5>
-        <p>LLM переводить вільний запит («рефрижератор із Далласа цього тижня до 900») у структурований фільтр + опційний векторний пошук за смисловою близькістю; завжди є детерміністичний фолбек на форму з фільтрами, якщо парсинг непевний.</p>
+        <h5>NL Search (7.6) <span class="pill pill--done">MVP</span></h5>
+        <p><strong>Реалізовано:</strong> <code>POST /api/search</code> (<code>core/llm.py</code>) шле запит у Claude Haiku 4.5 через <code>messages.parse()</code> зі структурованим виходом (<code>SearchFilter</code>: origin/destination/equipment_type/price_max/weight_min/weight_max), результат застосовується як звичайні SQLAlchemy-фільтри поверх <code>loads</code>. Векторний пошук за смисловою близькістю (embeddings) — ще не реалізовано, лишається ціллю Фази 2/3. Якщо ключ <code>ANTHROPIC_API_KEY</code> відсутній або виклик до Anthropic падає — фолбек не «форма з фільтрами», а просто нефільтрований список вантажів (той самий запит, що й <code>GET /api/loads</code>); ендпоінт ніколи не повертає помилку через відмову LLM.</p>
       </div>
       <div class="card">
         <h5>ETA (7.7)</h5>
@@ -773,6 +774,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Публікація вантажу — тільки роль <code>shipper</code>, <code>shipper_id</code> береться з токена</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Взяти вантаж напряму — тільки роль <code>carrier</code>, <code>carrier_id</code> береться з токена</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Позначити завершеним — лише shipper вантажу або carrier, що його взяв</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Пошук вантажів природною мовою — LLM-парсинг у фільтр (розділ 7.6), фолбек на нефільтрований список</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
@@ -783,7 +785,6 @@ CREATE TABLE documents (
         <thead><tr><th>Метод</th><th>Шлях</th><th>Опис</th></tr></thead>
         <tbody>
           <tr><td><code>GET</code></td><td><code>/api/loads/{id}/matches</code></td><td>AI-рекомендації вантажів під профіль перевізника</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Пошук вантажів природною мовою</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/rates/forecast</code></td><td>Прогноз ставки за лейном/типом кузова/датою</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/offers</code></td><td>Створити офер (людиною або AI-агентом)</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Контрпропозиція</td></tr>
@@ -911,7 +912,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Сьогодні тестів немає — жодного файлу під <code>backend/tests</code> чи <code>frontend/src/**/*.test.*</code>. Перший приорітет Фази 2: покрити перехід статусів вантажу (<code>open→accepted→completed</code>) і авторизацію ендпоінтів, оскільки саме там зараз відомий розрив (розділ 17).</p>
+    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів і <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
 
     <!-- 16 -->
     <h2 id="s16"><span class="num">16</span>Технічна дорожня карта</h2>
@@ -919,8 +920,8 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Фаза</th><th>Технічна ціль</th><th>AI-фічі, що вмикаються</th></tr></thead>
         <tbody>
-          <tr><td><b>MVP</b> <span class="pill pill--done">готово</span></td><td>Транзакційний каркас: auth, вантажі, статуси</td><td>—</td></tr>
-          <tr><td><b>Фаза 2</b> <span class="pill pill--wip">3–4 міс</span></td><td>Авторизація на рівні ресурсу, тести, CI, черга задач, обʼєктне сховище, pgvector</td><td>Розумний підбір вантажу, пошук природною мовою (базова версія)</td></tr>
+          <tr><td><b>MVP</b> <span class="pill pill--done">готово</span></td><td>Транзакційний каркас: auth, вантажі, статуси</td><td>Пошук природною мовою (базова версія — структурований фільтр, без векторного пошуку) <span class="pill pill--done">готово</span></td></tr>
+          <tr><td><b>Фаза 2</b> <span class="pill pill--wip">3–4 міс</span></td><td>Авторизація на рівні ресурсу, тести, CI, черга задач, обʼєктне сховище, pgvector</td><td>Розумний підбір вантажу, векторний пошук поверх NL Search, rate limiting/cost cap для LLM-викликів</td></tr>
           <tr><td><b>Фаза 3</b> <span class="pill pill--planned">5–9 міс</span></td><td>Kubernetes, шина подій, спостережуваність, мобільний застосунок</td><td>Прогноз ставки, скоринг надійності, автоматизація документів, ETA</td></tr>
           <tr><td><b>Фаза 4</b> <span class="pill pill--research">R&amp;D</span></td><td>Multi-region, SSO для enterprise, платіжний рейл</td><td>AI-асистент переговорів (найризикованіша фіча — останньою, після довіри користувачів до простіших AI-функцій)</td></tr>
         </tbody>
@@ -939,9 +940,10 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT без refresh і без відкликання, дефолтний секрет у коді</td><td>Вкрадений токен дійсний до 7 днів; ризик при випадковому деплої з дефолтним <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</td><td>Немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>Тести бекенду — лише health-check і auth/ownership на <code>loads</code> (7 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code> і <code>/api/search</code> (9 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>Немає rate limiting на <code>/api/auth/*</code></td><td>Вразливість до brute-force підбору пароля</td><td><span class="pill pill--risk">P2</span></td></tr>
-          <tr><td>8</td><td>AI-сервіси — поки що специфікація, не код</td><td>Основна цінність продукту для інвестора ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
+          <tr><td>8</td><td>6 із 7 AI-сервісів — поки що специфікація, не код (реалізовано лише NL Search, розділ 7.6)</td><td>Основна цінність продукту для інвестора здебільшого ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
+          <tr><td>9</td><td><code>POST /api/search</code> без rate limiting і без per-request/per-period cost cap на виклики Anthropic (розділ 7.8 — «circuit breaker» ще не реалізовано)</td><td>Будь-хто без автентифікації може ініціювати необмежену кількість платних LLM-викликів</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -1159,8 +1161,9 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Technology</th><th>Role</th><th>Status</th></tr></thead>
         <tbody>
+          <tr><td>Claude Haiku 4.5 (structured outputs)</td><td>Extracting a structured filter from a free-text query — NL Search (section 7.6)</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>LLM Gateway (a LiteLLM-style layer)</td><td>Single call point for models across providers, with fallback and a cost meter</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
-          <tr><td>Claude / GPT-class models (function calling)</td><td>Negotiation Agent, NL Search, document structuring</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Claude / GPT-class models (function calling)</td><td>Negotiation Agent, document structuring</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Sentence-embedding model (e.g. the <code>bge</code>/<code>e5</code> class)</td><td>Vectorizing loads and queries for matching and search</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Gradient boosting (LightGBM/XGBoost)</td><td>Market rate forecast, ETA, trust scoring — tabular data, where explainability matters more than deep nets</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>OCR + layout model (e.g. the LayoutLM/Textract class)</td><td>Reading BOL/POD/rate confirmation</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
@@ -1277,7 +1280,7 @@ CREATE TABLE documents (
           <tr><td>Negotiation Service</td><td>LLM agent that runs the first round of contact and bargains within set bounds</td><td>LLM function calling + guardrails (section 7.1)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Trust Service</td><td>Counterparty trust scoring, double-brokerage flags</td><td>Tabular classifier + external checks (FMCSA, insurance)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Document Intelligence Service</td><td>OCR and structuring of BOL/POD/rate confirmation</td><td>OCR + layout model + LLM extraction (section 7.2)</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
-          <tr><td>Search Service</td><td>Natural-language load search</td><td>LLM parsing → structured filter + vector search</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
+          <tr><td>Search Service</td><td>Natural-language load search</td><td>LLM parsing (<code>POST /api/search</code>, section 7.6) → structured filter; vector search not yet built</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>ETA Service</td><td>Arrival-time estimate accounting for traffic/weather/HOS</td><td>Regression + telematics/traffic API</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Notification Service</td><td>Push/email/SMS for load status changes, new offers</td><td>WebSocket + task queue</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
         </tbody>
@@ -1298,7 +1301,7 @@ CREATE TABLE documents (
           <tr><td>AI negotiation assistant</td><td>LLM agent with function calling</td><td>Price bounds from the shipper, lane history, counterparty messages</td><td>Yes — escalation outside trusted bounds (section 7.1)</td></tr>
           <tr><td>Trust scoring</td><td>Tabular classifier + rules</td><td>Payment history, FMCSA data, insurance documents, fraud flags</td><td>Yes — a low score blocks auto-matching, needs manual review</td></tr>
           <tr><td>Document automation</td><td>OCR + LLM extraction</td><td>Scanned/photographed BOL, POD, rate confirmation</td><td>Yes — below the confidence threshold (section 7.2)</td></tr>
-          <tr><td>Natural-language search</td><td>LLM parsing → filter + vector search</td><td>Free-text user query</td><td>No — deterministic fallback to the filter form</td></tr>
+          <tr><td>Natural-language search <span class="pill pill--done">MVP</span></td><td>LLM parsing → structured filter (vector search — planned)</td><td>Free-text user query</td><td>No — deterministic fallback to the unfiltered load list</td></tr>
           <tr><td>ETA forecast</td><td>Regression on telematics/traffic</td><td>Carrier GPS, traffic, weather, driver HOS limits</td><td>No</td></tr>
         </tbody>
       </table>
@@ -1384,8 +1387,8 @@ CREATE TABLE documents (
         <p>0–100 with explained factors (JSONB <code>factors</code>), not a black box — the carrier/shipper can see why the score is what it is, and can dispute it. A low score doesn't auto-ban; it lowers matching priority and adds a warning.</p>
       </div>
       <div class="card">
-        <h5>NL Search (7.6)</h5>
-        <p>The LLM turns a free-text query ("reefer out of Dallas this week under 900") into a structured filter plus an optional vector search by semantic closeness; there's always a deterministic fallback to the filter form if parsing is uncertain.</p>
+        <h5>NL Search (7.6) <span class="pill pill--done">MVP</span></h5>
+        <p><strong>Shipped:</strong> <code>POST /api/search</code> (<code>core/llm.py</code>) calls Claude Haiku 4.5 via <code>messages.parse()</code> with a structured output (<code>SearchFilter</code>: origin/destination/equipment_type/price_max/weight_min/weight_max), and the result is applied as ordinary SQLAlchemy filters over <code>loads</code>. Vector search by semantic closeness (embeddings) isn't built yet — still a Phase 2/3 target. If <code>ANTHROPIC_API_KEY</code> is missing or the Anthropic call fails, the fallback isn't a "filter form" — it's simply the unfiltered load list (the same query <code>GET /api/loads</code> runs); the endpoint never errors out on an LLM failure.</p>
       </div>
       <div class="card">
         <h5>ETA (7.7)</h5>
@@ -1430,6 +1433,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Post a load — shipper role only, <code>shipper_id</code> comes from the token</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Take a load directly — carrier role only, <code>carrier_id</code> comes from the token</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Mark completed — only the load's shipper or the carrier who took it</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Natural-language load search — LLM parsing into a filter (section 7.6), falls back to the unfiltered list</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
@@ -1440,7 +1444,6 @@ CREATE TABLE documents (
         <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>GET</code></td><td><code>/api/loads/{id}/matches</code></td><td>AI load recommendations for a carrier's profile</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/search</code></td><td>Natural-language load search</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/rates/forecast</code></td><td>Rate forecast by lane/equipment/date</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/offers</code></td><td>Create an offer (human or AI agent)</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Counter-offer</td></tr>
@@ -1568,7 +1571,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Today there are no tests — not a single file under <code>backend/tests</code> or <code>frontend/src/**/*.test.*</code>. The top Phase 2 priority: cover the load status transition (<code>open→accepted→completed</code>) and endpoint authorization, since that's exactly where the known gap is right now (section 17).</p>
+    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, and <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
 
     <!-- 16 -->
     <h2 id="s16-en"><span class="num">16</span>Technical roadmap</h2>
@@ -1576,8 +1579,8 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Phase</th><th>Technical goal</th><th>AI features unlocked</th></tr></thead>
         <tbody>
-          <tr><td><b>MVP</b> <span class="pill pill--done">done</span></td><td>Transactional scaffold: auth, loads, statuses</td><td>—</td></tr>
-          <tr><td><b>Phase 2</b> <span class="pill pill--wip">3–4 mo</span></td><td>Resource-level authorization, tests, CI, task queue, object storage, pgvector</td><td>Smart load matching, natural-language search (basic version)</td></tr>
+          <tr><td><b>MVP</b> <span class="pill pill--done">done</span></td><td>Transactional scaffold: auth, loads, statuses</td><td>Natural-language search (basic version — structured filter, no vector search yet) <span class="pill pill--done">done</span></td></tr>
+          <tr><td><b>Phase 2</b> <span class="pill pill--wip">3–4 mo</span></td><td>Resource-level authorization, tests, CI, task queue, object storage, pgvector</td><td>Smart load matching, vector search on top of NL Search, rate limiting/cost cap for LLM calls</td></tr>
           <tr><td><b>Phase 3</b> <span class="pill pill--planned">5–9 mo</span></td><td>Kubernetes, event bus, observability, mobile app</td><td>Rate forecast, trust scoring, document automation, ETA</td></tr>
           <tr><td><b>Phase 4</b> <span class="pill pill--research">R&amp;D</span></td><td>Multi-region, enterprise SSO, payment rail</td><td>AI negotiation assistant (the highest-value but riskiest feature — shipped last, after users trust the simpler AI features)</td></tr>
         </tbody>
@@ -1596,9 +1599,10 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT has no refresh and no revocation, default secret in code</td><td>A stolen token stays valid for up to 7 days; risk if a build ever ships with the default <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</td><td>No managed path for evolving the schema against production data</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>Backend tests cover only the health check and loads auth/ownership (7 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, and <code>/api/search</code> (9 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>No rate limiting on <code>/api/auth/*</code></td><td>Vulnerable to password brute-forcing</td><td><span class="pill pill--risk">P2</span></td></tr>
-          <tr><td>8</td><td>AI services are still a spec, not code</td><td>The core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
+          <tr><td>8</td><td>6 of 7 AI services are still a spec, not code (only NL Search is built, section 7.6)</td><td>Most of the core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
+          <tr><td>9</td><td><code>POST /api/search</code> has no rate limiting and no per-request/per-period cost cap on Anthropic calls (section 7.8's "circuit breaker" isn't built yet)</td><td>Anyone, unauthenticated, can trigger unlimited billed LLM calls</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>
     </div>

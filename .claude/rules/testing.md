@@ -26,18 +26,28 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-Right now there are two test files: `backend/tests/test_health.py` (a
-smoke test) and `backend/tests/test_load_ownership.py` (auth/role/ownership
-on the three mutating load endpoints) — still nowhere near coverage, just
-the two slices that existed reasons to test first. When you add backend
+Right now there are three test files: `backend/tests/test_health.py` (a
+smoke test), `backend/tests/test_load_ownership.py` (auth/role/ownership
+on the three mutating load endpoints), and `backend/tests/test_search.py`
+(NL search — fallback-to-unfiltered-list, filter application, empty-query
+rejection) — still nowhere near coverage, just the slices that existed
+reasons to test first. `backend/tests/conftest.py` holds the shared
+`register_user(client, role)` helper (extracted out of
+`test_load_ownership.py` once `test_search.py` needed the same setup) — use
+it instead of writing a new inline registration helper. When you add backend
 behavior, add a test for it in `backend/tests/` following their pattern
 (`fastapi.testclient.TestClient`, hit the route, assert on the response;
 use `uuid.uuid4()` in emails/company names if a test registers users, so
-repeat runs against a persistent local DB don't collide). Planned test scope
-beyond that is listed in `docs/technical-documentation.html` section 15 —
-endpoint authorization is now covered (`test_load_ownership.py`); the next
-gap is the load status transition itself (`open→accepted→completed`, e.g.
-completing a load that was never accepted).
+repeat runs against a persistent local DB don't collide). `test_search.py`
+also shows the pattern for mocking the Anthropic call: `unittest.mock.patch`
+the import site (`app.api.routes.search.parse_search_query`), not the
+definition site (`app.core.llm.parse_search_query`) — patching the
+definition doesn't affect the name already imported into `search.py`. This
+keeps tests deterministic and runnable in CI with no `ANTHROPIC_API_KEY` and
+no network access. Planned test scope beyond that is listed in
+`docs/technical-documentation.html` section 15 — endpoint authorization and
+NL search are now covered; the next gap is the load status transition itself
+(`open→accepted→completed`, e.g. completing a load that was never accepted).
 
 ## Frontend
 

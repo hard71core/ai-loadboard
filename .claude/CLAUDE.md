@@ -5,12 +5,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A demo-stage, two-sided freight marketplace: a shipper posts a load, a carrier
-takes it directly — no broker. Despite the "AI Loadboard" name, **zero AI
-features are implemented**. The backend is a plain FastAPI CRUD service
+takes it directly — no broker. The backend is a plain FastAPI CRUD service
 (`backend/app/`) over two tables, the frontend is a single-screen React SPA
-(`frontend/`). The full AI/event-driven architecture (7 AI services, an event
-bus, etc.) is a *target design*, documented but not built — see "Docs" below
-before assuming any AI-related code exists to modify.
+(`frontend/`). **One of the 7 AI features is now real**: natural-language load
+search (`POST /api/search`, `core/llm.py`, Claude Haiku 4.5, structured
+outputs) — see `.claude/rules/security.md` for its `ANTHROPIC_API_KEY`
+requirement and fallback behavior. The other 6 (matching, pricing, the
+negotiation agent, trust scoring, document intelligence, ETA) plus the
+full event-driven architecture (a separate service per feature, an event
+bus) are still a *target design*, documented but not built — see "Docs"
+below before assuming more AI-related code exists than this one feature.
 
 Detailed conventions live in `.claude/rules/`: `code-style.md`, `testing.md`,
 `security.md`. This file has the project shape, commands, and the rules that
@@ -96,17 +100,23 @@ core/
   database.py       engine/Session/get_db, loads .env (see below)
   security.py        JWT + password hashing, get_current_user
   config.py           CORS_ORIGINS parsing
+  llm.py               the only place that calls an LLM provider — see
+                        .claude/rules/security.md for its fail-closed contract
 api/
   deps.py             re-exports get_db/get_current_user for routes
   routes/
     auth.py            register/login/me
     loads.py           list/create/accept/complete
+    search.py           NL search — parses via core/llm.py, applies the
+                         result as SQLAlchemy filters, same query shape as
+                         loads.py's list endpoint when there's no filter
 models.py           SQLAlchemy models — flat, no second domain yet to split it by
 schemas.py          Pydantic schemas — flat, same reasoning
 ```
-Flat `models.py`/`schemas.py` is deliberate, not an oversight — split them
-(and `api/routes/`) into per-domain packages once a second real domain
-shows up (Matching, Pricing, ... from section 7), not before.
+`api/routes/` is already split by domain (auth / loads / search); `models.py`
+and `schemas.py` stay flat on purpose — each domain there is still only a
+handful of small classes, not enough to justify a package per domain yet.
+Revisit when one of them actually gets that big, not preemptively.
 
 **One `.env` at the repo root is the single source of config**, read three
 different ways:

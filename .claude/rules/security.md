@@ -10,6 +10,12 @@ code.
   a real secret as a fallback in code — the one exception is the existing
   `"dev-secret-change-me"` placeholder default in `backend/app/core/security.py`,
   which only exists so the demo boots without setup; don't add others like it.
+- `ANTHROPIC_API_KEY` (`.env`) is a billed third-party credential, not just
+  another config value — same "never commit, never log it" rule as
+  `JWT_SECRET`. `core/llm.py` treats it as optional at runtime (unset or
+  the `.env.example` placeholder both fall through to "no filter"), so a
+  missing key is never a reason to hardcode a real one anywhere as a
+  fallback.
 - Every mutating endpoint must check authentication **and** ownership before
   this project can be considered production-safe (see "Known gaps" below —
   this isn't true yet for three endpoints).
@@ -46,6 +52,13 @@ closed there.
 - Auth (`backend/app/core/security.py`) is JWT (HS256, `python-jose`) with no refresh
   token and no revocation — a stolen token is valid for the full
   `JWT_EXPIRE_MINUTES` window (7 days by default). Tracked as P1.
-- Backend test coverage is still thin — health check plus loads
-  auth/ownership only (`backend/tests/`). No frontend tests exist. Tracked
-  as P1.
+- Backend test coverage is still thin — health check, loads auth/ownership,
+  and `/api/search` (LLM call mocked) only (`backend/tests/`). No frontend
+  tests exist. Tracked as P1.
+- `POST /api/search` (`core/llm.py`) has no rate limiting, no per-request
+  or per-period cost cap, and no auth requirement — anyone can trigger
+  billed Anthropic API calls at will. The "cost budget and circuit
+  breaker" pattern described in `docs/technical-documentation.html`
+  section 7.8 is aspirational, not implemented. Tracked as P2 — real
+  exposure is small while the account has no meaningful traffic, but this
+  needs a fix before any public/high-traffic deploy.
