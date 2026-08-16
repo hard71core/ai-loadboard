@@ -5,11 +5,11 @@ registers its own users with a unique email (uuid4) so repeated runs against
 a persistent local Postgres don't collide on "user already exists".
 """
 
-import uuid
-
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+from .conftest import register_user
 
 LOAD_PAYLOAD = {
     "title": "Test load",
@@ -20,22 +20,6 @@ LOAD_PAYLOAD = {
 }
 
 
-def _register(client: TestClient, role: str) -> tuple[str, str]:
-    """Registers a fresh user with the given role, returns (token, company_name)."""
-    company_name = f"{role}-{uuid.uuid4().hex[:8]}"
-    res = client.post(
-        "/api/auth/register",
-        json={
-            "email": f"{uuid.uuid4().hex}@example.com",
-            "password": "secret123",
-            "company_name": company_name,
-            "role": role,
-        },
-    )
-    assert res.status_code == 201, res.text
-    return res.json()["access_token"], company_name
-
-
 def test_create_load_requires_auth():
     with TestClient(app) as client:
         res = client.post("/api/loads", json=LOAD_PAYLOAD)
@@ -44,7 +28,7 @@ def test_create_load_requires_auth():
 
 def test_create_load_rejects_carrier_role():
     with TestClient(app) as client:
-        token, _ = _register(client, "carrier")
+        token, _ = register_user(client, "carrier")
         res = client.post(
             "/api/loads", json=LOAD_PAYLOAD, headers={"Authorization": f"Bearer {token}"}
         )
@@ -53,7 +37,7 @@ def test_create_load_rejects_carrier_role():
 
 def test_shipper_creates_load_with_derived_identity():
     with TestClient(app) as client:
-        token, company_name = _register(client, "shipper")
+        token, company_name = register_user(client, "shipper")
         res = client.post(
             "/api/loads", json=LOAD_PAYLOAD, headers={"Authorization": f"Bearer {token}"}
         )
@@ -65,7 +49,7 @@ def test_shipper_creates_load_with_derived_identity():
 
 def test_accept_rejects_shipper_role():
     with TestClient(app) as client:
-        shipper_token, _ = _register(client, "shipper")
+        shipper_token, _ = register_user(client, "shipper")
         load = client.post(
             "/api/loads",
             json=LOAD_PAYLOAD,
@@ -81,9 +65,9 @@ def test_accept_rejects_shipper_role():
 
 def test_complete_requires_being_shipper_or_accepting_carrier():
     with TestClient(app) as client:
-        shipper_token, _ = _register(client, "shipper")
-        carrier_token, carrier_name = _register(client, "carrier")
-        other_carrier_token, _ = _register(client, "carrier")
+        shipper_token, _ = register_user(client, "shipper")
+        carrier_token, carrier_name = register_user(client, "carrier")
+        other_carrier_token, _ = register_user(client, "carrier")
 
         load = client.post(
             "/api/loads",
