@@ -16,8 +16,8 @@ one on); the rest of the AI subsystem described in
 - **AI:** Anthropic Claude (Haiku 4.5, structured outputs) — natural-language load
   search, `backend/app/core/llm.py`
 - **Maps:** Leaflet + CARTO Voyager tiles, OpenStreetMap Nominatim for geocoding
-  (no API key) — the load detail page's route map,
-  `frontend/src/components/RouteMap.tsx`
+  and OSRM for driving routes (no API key for either) — the load detail
+  page's route map, `frontend/src/components/RouteMap.tsx`
 
 ## Setup
 
@@ -112,9 +112,11 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
   registration: **shipper** or **carrier**
 - List of open loads (route, equipment type, weight, rate, shipper) — click
   any row to open its detail page (`/loads/:id`), which includes a map with
-  the origin/destination pinned and an approximate (straight-line, not
-  turn-by-turn) route between them — geocoded via OpenStreetMap's Nominatim,
-  no API key needed
+  the origin/destination pinned and the actual driving route between them —
+  distance and estimated drive time in their own panel — geocoded via
+  OpenStreetMap's Nominatim and routed via OSRM, no API key needed for
+  either; falls back to a dashed straight line if live routing is
+  temporarily unavailable
 - Natural-language load search (e.g. "reefer out of Dallas under 900") — when
   `NL_SEARCH_ENABLED=true`, Claude Haiku 4.5 turns the query into a
   structured filter; off by default (or if the key is missing or the LLM

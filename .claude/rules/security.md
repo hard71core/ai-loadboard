@@ -76,3 +76,10 @@ closed there.
   proper caching/throttling or a paid geocoder — Nominatim's operators can
   and do block abusive IPs. Tracked as P2, same reasoning as the search
   cost-cap item above.
+- `frontend/src/routing.ts` calls OSRM's public demo server
+  (`router.project-osrm.org`) directly from the browser for driving
+  directions — same shape of gap as `geocode.ts` above: no key, no
+  backend proxy, no rate limiting beyond the same in-memory per-session
+  cache pattern. That server is explicitly a demo/showcase for the OSRM
+  project, not a production dependency — no uptime or rate guarantee.
+  Tracked as P2, same reasoning as the Nominatim item above.
