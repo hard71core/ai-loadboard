@@ -29,6 +29,26 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class RefreshToken(Base):
+    """One row per issued refresh token — what makes revocation possible at
+    all, unlike the stateless access JWT (core/security.py). Only a SHA-256
+    hash of the token is stored, never the raw value, same principle as
+    hashed_password above: a DB read alone doesn't hand out a usable
+    credential. Rotated on every use (core/security.py's rotate_refresh_token)
+    — revoked_at gets set and a fresh row is inserted rather than the same
+    row being reused, so a stolen-and-replayed old token is a detectable,
+    rejected reuse instead of a silent second valid session."""
+
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String, nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class Load(Base):
     """A shipment posted directly by a shipper, matched directly to a carrier —
     no broker in the middle."""

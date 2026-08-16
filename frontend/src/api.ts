@@ -5,7 +5,6 @@ import type {
   LoadETA,
   LoginPayload,
   RegisterPayload,
-  User,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -96,9 +95,28 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   return handle<AuthResponse>(res, "Log in failed");
 }
 
-export async function fetchMe(token: string): Promise<User> {
-  const res = await fetch(`${API_URL}/api/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
+/** Exchanges a still-valid refresh token for a new access/refresh pair —
+the response already includes the current user, so callers don't need a
+separate /api/auth/me round trip (AuthContext.tsx uses this for both the
+page-load bootstrap and the silent background refresh). Rejects (instead of
+throwing a generic Error) on a 401 so AuthContext can tell "refresh token is
+dead, log the user out" apart from a transient network failure. */
+export async function refreshAccessToken(refreshToken: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_URL}/api/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
   });
-  return handle<User>(res, "Session is invalid");
+  return handle<AuthResponse>(res, "Session refresh failed");
+}
+
+/** Best-effort — revokes the refresh token server-side so it can't be
+replayed later, but the caller (AuthContext.tsx's logout()) clears local
+state either way, so a network failure here shouldn't block logging out. */
+export async function logoutUser(refreshToken: string): Promise<void> {
+  await fetch(`${API_URL}/api/auth/logout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
 }

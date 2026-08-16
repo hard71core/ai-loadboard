@@ -143,9 +143,12 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
   "estimate unavailable" if live routing can't be reached, same fail-closed
   contract as the map above
 
-Test accounts can be created right in the UI via the "Sign up" button. The
-session token is stored in the browser (localStorage), so the login persists
-across page reloads.
+Test accounts can be created right in the UI via the "Sign up" button. Login
+uses a short-lived (15 min by default) access token plus a longer-lived,
+revocable refresh token — both stored in the browser (localStorage), so the
+login persists across page reloads; the frontend refreshes the access token
+silently in the background before it expires, and logging out revokes the
+refresh token server-side rather than just discarding it locally.
 
 ## Stopping
 

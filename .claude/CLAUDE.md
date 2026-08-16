@@ -142,7 +142,11 @@ main.py            app wiring only — FastAPI(), CORS, lifespan/seed data,
                     include_router(...), /api/health
 core/
   database.py       engine/Session/get_db, loads .env (see below)
-  security.py        JWT + password hashing, get_current_user
+  security.py        JWT (short-lived access token, 15 min default) +
+                      password hashing + get_current_user, plus the
+                      refresh-token lifecycle (issue/rotate/revoke) backing
+                      RefreshToken in models.py — see security.md's
+                      "Resolved" section for why it's rotation, not reuse
   config.py           CORS_ORIGINS parsing
   llm.py               the only place that calls an LLM provider — see
                         .claude/rules/security.md for its fail-closed contract
@@ -153,7 +157,11 @@ core/
 api/
   deps.py             re-exports get_db/get_current_user for routes
   routes/
-    auth.py            register/login/me
+    auth.py            register/login/me/refresh/logout — register and
+                       login return an access+refresh pair; refresh rotates
+                       (old refresh token dies the moment a new one is
+                       issued); logout revokes without needing a Bearer
+                       header, same trust model as the refresh token itself
     loads.py           list/detail/create/accept/complete — the detail
                         route is GET /{load_id:int}; the :int converter is
                         load-bearing, not just typing hygiene, see its
@@ -204,7 +212,17 @@ components/
                         core/eta.py); renders nothing for an open load,
                         since RouteMap's own estimate above already covers
                         plain transit time regardless of status
-AuthContext.tsx     auth state (token/user), localStorage-backed
+AuthContext.tsx     auth state (token/user), localStorage-backed (both the
+                    access and refresh token — see security.md for the
+                    XSS trade-off that implies). Boots by exchanging a
+                    stored refresh token for a fresh pair (no separate
+                    /api/auth/me call needed, refresh already returns the
+                    user), and schedules a silent background refresh ~30s
+                    before the access token's own exp claim (decoded
+                    client-side, not verified — only used to time the
+                    next refresh, the server still enforces expiry on
+                    every request) so an active session never visibly
+                    401s. A failed refresh (dead/revoked token) logs out.
 api.ts               every backend call in one place
 geocode.ts            the only frontend place that calls a third-party
                        geocoder (Nominatim, keyless) — see security.md for
@@ -235,8 +253,11 @@ There are **two DB URLs by design**: `DATABASE_URL` (host networking —
 `DATABASE_URL_DOCKER` (container networking — `db:5432`, injected into the
 `backend` service in `docker-compose.yml`). Don't collapse these into one.
 
-**Data model** (`backend/app/models.py`) is intentionally minimal: `users`
-and `loads` only. Schema is managed by Alembic (`backend/migrations/`,
+**Data model** (`backend/app/models.py`) is intentionally minimal: `users`,
+`loads`, and `refresh_tokens` (the last one exists purely to make session
+revocation possible — see security.md — and has no FKs pointing *into* it
+from anywhere else, so it doesn't really add domain complexity). Schema is
+managed by Alembic (`backend/migrations/`,
 `alembic.ini`) — `Base.metadata.create_all()` is gone; every schema change
 is a migration file now. `migrations/env.py` builds its engine from
 `app.core.database.engine` directly (same `DATABASE_URL` resolution the
@@ -258,8 +279,8 @@ layer (`api/routes/loads.py`) — this used to be a P0 gap, now closed.
 `Load` also has `accepted_at` (nullable, set server-side by `accept_load`)
 — added for the ETA MVP (`core/eta.py`), it's the only "transit started"
 timestamp the system has without a telematics/GPS feed.
-Still-open gaps (JWT refresh/revocation, test coverage) are tracked in
-`.claude/rules/security.md`, not repeated here.
+Still-open gaps (the refresh token's localStorage/XSS exposure, test
+coverage) are tracked in `.claude/rules/security.md`, not repeated here.
 
 **Docs** (`docs/`) hold two long-form specs, each with an HTML source and a
 generated PDF twin:

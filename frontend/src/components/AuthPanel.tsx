@@ -32,7 +32,7 @@ export default function AuthPanel({ onClose, initialMode = "login" }: Props) {
               company_name: companyName,
               role,
             });
-      setAuth(res.access_token, res.user);
+      setAuth(res);
       onClose();
     } catch (e) {
       setError((e as Error).message);

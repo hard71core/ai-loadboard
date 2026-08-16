@@ -47,18 +47,46 @@ code.
   FKs (`backend/app/models.py`), set server-side from the authenticated
   user, never from the request body. `*_name` stays as a display cache,
   also server-derived now.
+- ~~Auth is JWT with no refresh token and no revocation — a stolen token is
+  valid for the full `JWT_EXPIRE_MINUTES` window (7 days by default)~~ —
+  **fixed.** `JWT_EXPIRE_MINUTES` now defaults to 15 (minutes, not days);
+  session longevity comes from a separate, revocable refresh token instead
+  (`refresh_tokens` table, `backend/app/core/security.py`) — hashed at
+  rest, rotated on every use (`POST /api/auth/refresh`), and a stolen
+  refresh token that gets replayed after the legitimate client already
+  rotated it is a rejected reuse, not a silent second session. `POST
+  /api/auth/logout` revokes it outright. The access JWT itself is still
+  unrevocable (it's stateless by design), but 15 minutes bounds the blast
+  radius instead of 7 days. See `backend/tests/test_auth_refresh.py`.
 
-Both were P0 in `docs/technical-documentation.html` section 17, now marked
-closed there.
+Both P0s and the JWT gap were tracked in `docs/technical-documentation.html`
+section 17, now marked closed there.
+
+**New trade-off this introduced, tracked as P2 (see below):** the refresh
+token is a plain string in `localStorage`, same as the access token before
+it — an XSS on this origin can steal it. The tech doc's target design
+(section 9) calls for an httpOnly cookie instead, which JS on the page
+can't read at all; that's real future work, not done here. Rotation limits
+how *long* a stolen refresh token stays useful (one use, then it's dead),
+but doesn't stop the theft itself the way an httpOnly cookie would.
 
 ## Known gaps (still open — don't silently "fix" without flagging)
 
-- Auth (`backend/app/core/security.py`) is JWT (HS256, `python-jose`) with no refresh
-  token and no revocation — a stolen token is valid for the full
-  `JWT_EXPIRE_MINUTES` window (7 days by default). Tracked as P1.
+- The refresh token introduced above lives in `localStorage`
+  (`frontend/src/AuthContext.tsx`), readable by any JS running on the page
+  — an XSS vulnerability anywhere on the site can exfiltrate it, same
+  exposure the access token already had. Rotation (see "Resolved" above)
+  limits a stolen token to one use before it's rejected, but doesn't
+  prevent the theft. The tech doc's target (section 9) is an httpOnly
+  cookie, which client-side JS can't read regardless — not implemented,
+  would need CSRF protection to go with it. Tracked as P2: real exposure
+  needs an actual XSS elsewhere first, and there's no known one, but this
+  is the kind of gap that's cheap to close later and expensive to discover
+  in an incident.
 - Backend test coverage is still thin — health check, loads auth/ownership,
-  and `/api/search` (LLM call mocked) only (`backend/tests/`). No frontend
-  tests exist. Tracked as P1.
+  search, matching, load detail, ETA, and auth refresh/rotation/revocation
+  (`backend/tests/`, see `.claude/rules/testing.md` for the full list). No
+  frontend tests exist. Tracked as P1.
 - `POST /api/search` (`core/llm.py`) has no rate limiting, no per-request
   or per-period cost cap, and no auth requirement — once `NL_SEARCH_ENABLED`
   is turned on, anyone can trigger billed Anthropic API calls at will (the

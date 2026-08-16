@@ -367,12 +367,12 @@
       <table>
         <thead><tr><th>Компонент</th><th>Поточний стан (MVP)</th><th>Цільовий стан</th></tr></thead>
         <tbody>
-          <tr><td>Клієнт</td><td>React SPA з клієнтським роутингом (<code>react-router</code>): список вантажів + сторінка деталей вантажу, ручний <code>fetch</code></td><td>React SPA + мобільний застосунок (React Native), кешування запитів, realtime через WebSocket</td></tr>
+          <tr><td>Клієнт</td><td>React SPA з клієнтським роутингом (<code>react-router</code>): маркетингова головна, список вантажів, сторінка деталей вантажу, сторінка документації, ручний <code>fetch</code></td><td>React SPA + мобільний застосунок (React Native), кешування запитів, realtime через WebSocket</td></tr>
           <tr><td>Бекенд</td><td>Один монолітний FastAPI-сервіс</td><td>Core-сервіс + вісім AI-сервісів, розв'язаних через шину подій</td></tr>
-          <tr><td>База даних</td><td>Один PostgreSQL, 2 таблиці (<code>users</code>, <code>loads</code>), схема під Alembic-міграціями</td><td>PostgreSQL (OLTP) + pgvector/векторна БД + Redis (кеш/черги) + обʼєктне сховище документів</td></tr>
-          <tr><td>Автентифікація</td><td>Email + пароль, JWT без refresh</td><td>JWT + refresh-токени, MFA, SSO для enterprise-акаунтів</td></tr>
+          <tr><td>База даних</td><td>Один PostgreSQL, 3 таблиці (<code>users</code>, <code>loads</code>, <code>refresh_tokens</code>), схема під Alembic-міграціями</td><td>PostgreSQL (OLTP) + pgvector/векторна БД + Redis (кеш/черги) + обʼєктне сховище документів</td></tr>
+          <tr><td>Автентифікація</td><td>Email + пароль, короткоживучий JWT (15 хв) + revocable refresh-токен з ротацією (розділ 9)</td><td>Refresh-токен в httpOnly cookie замість <code>localStorage</code>, MFA, SSO для enterprise-акаунтів</td></tr>
           <tr><td>Матчинг вантажів</td><td>MVP: детерміністична евристика під історію перевізника (розділ 7.3)</td><td>ML-ранжування під профіль перевізника</td></tr>
-          <tr><td>AI-функції</td><td>2 з 7 — NL Search і Smart Matching, обидва MVP без ML/embeddings (розділи 7.3/7.6)</td><td>7 AI-сервісів (розділ 7)</td></tr>
+          <tr><td>AI-функції</td><td>3 з 7 — NL Search, Smart Matching і ETA, усі MVP без ML/embeddings (розділи 7.3/7.6/7.7)</td><td>7 AI-сервісів (розділ 7)</td></tr>
           <tr><td>Інфраструктура</td><td>Docker Compose, один хост</td><td>Kubernetes, кілька середовищ, автоскейлінг</td></tr>
           <tr><td>Спостережуваність</td><td>Немає — лише логи <code>uvicorn</code> у stdout</td><td>Метрики, трейсинг, структуровані логи, алертинг, AI-eval пайплайни</td></tr>
         </tbody>
@@ -778,9 +778,11 @@ CREATE TABLE documents (
         <thead><tr><th>Метод</th><th>Шлях</th><th>Опис</th><th>Auth</th></tr></thead>
         <tbody>
           <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Перевірка живості сервісу</td><td>—</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Реєстрація (email, пароль, компанія, роль)</td><td>—</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Вхід, видає JWT на 7 днів</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Реєстрація (email, пароль, компанія, роль) — видає пару access+refresh</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Вхід — видає пару access-JWT (15 хв) + refresh-токен</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Поточний користувач за токеном</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Обміняти дійсний refresh-токен на нову пару (ротація, розділ 9)</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/logout</code></td><td>Відкликати refresh-токен</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>Список вантажів, опційний фільтр <code>?status=</code></td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads/{id}</code></td><td>Деталі одного вантажу — сторінка деталей на фронтенді</td><td>—</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Публікація вантажу — тільки роль <code>shipper</code>, <code>shipper_id</code> береться з токена</td><td>Bearer</td></tr>
@@ -803,7 +805,6 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Контрпропозиція</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/companies/{id}/trust-score</code></td><td>Скор надійності з поясненими факторами</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/documents</code></td><td>Завантажити BOL/POD/rate confirmation</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Оновити access-токен за refresh-токеном</td></tr>
           <tr><td><code>WS</code></td><td><code>/ws/notifications</code></td><td>Realtime-сповіщення: нові офери, зміни статусу</td></tr>
         </tbody>
       </table>
@@ -811,7 +812,7 @@ CREATE TABLE documents (
 
     <!-- 9 -->
     <h2 id="s9"><span class="num">09</span>Автентифікація, авторизація й ролі</h2>
-    <p>Сьогодні: email+пароль → <code>bcrypt</code>-хеш → JWT (HS256, <code>sub</code>=email, термін дії 7 днів) з <code>python-jose</code>, без refresh-токена й без відкликання (вихід — лише видалення токена з <code>localStorage</code> на клієнті, сам токен лишається дійсним до сплину терміну).</p>
+    <p>Сьогодні: email+пароль → <code>bcrypt</code>-хеш → короткоживучий access-JWT (HS256, <code>sub</code>=email, 15 хв за замовчуванням) з <code>python-jose</code> + окремий refresh-токен (опаковий випадковий рядок, зберігається в БД лише як SHA-256-хеш, таблиця <code>refresh_tokens</code>). Ротація на кожному використанні (<code>POST /api/auth/refresh</code>) — старий refresh-токен помирає в момент видачі нового, тож повторне використання вкраденого токена після того, як легітимний клієнт уже зробив refresh, — відхилене повторне використання, а не тиха друга сесія. <code>POST /api/auth/logout</code> відкликає токен явно. Сам access-JWT відкликати не можна (він статичний за конструкцією), але коротке 15-хвилинне вікно замість 7 днів суттєво звужує вікно ризику. Фронтенд оновлює access-токен у фоні непомітно для користувача (<code>AuthContext.tsx</code>). Обидва токени зберігаються в <code>localStorage</code> — це усвідомлений компроміс, не цільовий дизайн (див. нижче).</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Роль</th><th>Може сьогодні</th><th>Ціль (Фаза 2+)</th></tr></thead>
@@ -823,7 +824,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Цільові покращення: <code>access_token</code> (15 хв) + <code>refresh_token</code> (httpOnly cookie, з ротацією), відкликання через deny-list у Redis, MFA для enterprise-акаунтів, SSO (OAuth2/OIDC) для великих shipper-клієнтів, окремі API-ключі з обмеженими scope для інтеграцій (TMS-конектори).</p>
+    <p>Цільові покращення: refresh-токен через httpOnly cookie замість <code>localStorage</code> (усуває XSS-читання, потребує CSRF-захисту навзаєм), відкликання через deny-list у Redis замість таблиці Postgres (масштаб), MFA для enterprise-акаунтів, SSO (OAuth2/OIDC) для великих shipper-клієнтів, окремі API-ключі з обмеженими scope для інтеграцій (TMS-конектори).</p>
 
     <!-- 10 -->
     <h2 id="s10"><span class="num">10</span>Безпека</h2>
@@ -832,9 +833,9 @@ CREATE TABLE documents (
         <thead><tr><th>Область</th><th>Поточний стан</th><th>Ціль</th></tr></thead>
         <tbody>
           <tr><td>Секрети</td><td><code>JWT_SECRET</code> зі змінної середовища, дефолт <code>"dev-secret-change-me"</code> у коді</td><td>Секрет-менеджер (Vault/AWS Secrets Manager), без дефолтів у коді</td></tr>
-          <tr><td>CORS</td><td><code>allow_origins=["*"]</code>, всі методи/заголовки</td><td>Явний allowlist доменів продакшн-фронтенду</td></tr>
+          <tr><td>CORS</td><td>Явний allowlist через <code>CORS_ORIGINS</code></td><td>Домени продакшн-фронтенду замінюють дефолтний dev-origin</td></tr>
           <tr><td>Rate limiting</td><td>Відсутній</td><td>На рівні API Gateway, окремо жорсткіше на <code>/auth/*</code></td></tr>
-          <tr><td>Авторизація на рівні ресурсу</td><td>Відсутня (розділ 17)</td><td>Перевірка власності (shipper бачить/редагує лише свої вантажі) на кожному mutating-ендпоінті</td></tr>
+          <tr><td>Авторизація на рівні ресурсу</td><td>Є на трьох mutating-ендпоінтах вантажів (розділ 17, закрито)</td><td>Те саме покриття по мірі появи нових ресурсів (offers, documents)</td></tr>
           <tr><td>PII та документи</td><td>Н/З — документів ще немає</td><td>Шифрування в спокої (S3 SSE), маскування PII перед LLM-викликами (розділ 7.8)</td></tr>
           <tr><td>Аудит</td><td>Відсутній</td><td><code>audit_log</code>: хто/що/коли, окремо — усі AI-повідомлення від імені платформи (розділ 7.1)</td></tr>
           <tr><td>Залежності</td><td>Не скануються</td><td>Dependabot/<code>pip-audit</code> у CI, блокування критичних CVE</td></tr>
@@ -949,7 +950,7 @@ CREATE TABLE documents (
         <tbody>
           <tr><td>1</td><td><s><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> не перевіряли автентифікацію чи роль</s> — закрито: усі три вимагають Bearer-токен і перевіряють роль (розділ 8)</td><td>Було: будь-хто без токена міг публікувати/забирати/закривати вантажі</td><td><span class="pill pill--done">Закрито</span></td></tr>
           <tr><td>2</td><td><s><code>loads.shipper_name</code>/<code>carrier_name</code> — вільний текст, не FK на <code>users</code></s> — закрито: додано <code>shipper_id</code>/<code>carrier_id</code> (розділ 5)</td><td>Було: неможливо перевірити власність вантажу; дані легко підробити</td><td><span class="pill pill--done">Закрито</span></td></tr>
-          <tr><td>3</td><td>JWT без refresh і без відкликання, дефолтний секрет у коді</td><td>Вкрадений токен дійсний до 7 днів; ризик при випадковому деплої з дефолтним <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>3</td><td><s>JWT без refresh і без відкликання</s> — закрито: короткоживучий (15 хв) access-JWT + окремий revocable refresh-токен з ротацією (розділ 9, <code>backend/app/core/security.py</code>). Дефолтний <code>JWT_SECRET</code> у коді лишається — свідомий виняток лише для демо (security.md), не забути замінити перед будь-яким спільним/staging-оточенням (див. README)</td><td>Було: вкрадений токен дійсний 7 днів без способу його відкликати</td><td><span class="pill pill--done">Закрито</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td><s>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</s> — закрито: Alembic (<code>backend/migrations/</code>), застосовується перед стартом застосунку в усіх середовищах (розділ 4)</td><td>Було: немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--done">Закрито</span></td></tr>
           <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code>, <code>/api/search</code>, <code>/api/loads/matches</code>, <code>GET /api/loads/{id}</code> і <code>GET /api/loads/{id}/eta</code> (24 тести); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
@@ -959,6 +960,7 @@ CREATE TABLE documents (
           <tr><td>10</td><td><code>frontend/src/geocode.ts</code> викликає Nominatim напряму з браузера, без бекенд-проксі й без rate limiting поза кешем в пам'яті на сесію — політика Nominatim обмежує безкоштовне використання ~1 запитом/сек</td><td>Реальний продакшн-трафік ризикує блокуванням IP з боку Nominatim</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>11</td><td><code>frontend/src/routing.ts</code> викликає публічний demo-сервер OSRM напряму з браузера — той самий тип обмеження, що й пункт 10: без бекенд-проксі, без rate limiting поза кешем у сесії; сервер офіційно не призначений для продакшн-навантаження</td><td>Немає SLA/гарантії доступності для реального трафіку</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>12</td><td><code>backend/app/core/eta.py</code> також викликає Nominatim і публічний demo-сервер OSRM напряму (з бекенда, для ETA MVP, розділ 7.7) — той самий тип обмеження, що й пункти 10–11, але тепер і серверний трафік; кеш у пам'яті процесу (не за сесію) частково пом'якшує навантаження на ці сервіси, але не є заміною реальному rate limiting чи платному провайдеру</td><td>Той самий ризик блокування/відсутності SLA, тепер із серверного, а не лише клієнтського боку</td><td><span class="pill pill--risk">P2</span></td></tr>
+          <tr><td>13</td><td>Refresh-токен (розділ 9) зберігається в <code>localStorage</code>, як і access-токен до нього — читається будь-яким JS на сторінці. Ротація (пункт 3 вище) обмежує вкрадений токен одним використанням, але не запобігає самій крадіжці; цільовий дизайн — httpOnly cookie, яку клієнтський JS взагалі не бачить, разом із CSRF-захистом</td><td>XSS будь-де на сайті може вкрасти сесію на весь термін дії refresh-токена (30 днів за замовчуванням), а не лише на 15 хв access-токена</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -1042,12 +1044,12 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Component</th><th>Current state (MVP)</th><th>Target state</th></tr></thead>
         <tbody>
-          <tr><td>Client</td><td>React SPA with client-side routing (<code>react-router</code>): load list + a load detail page, manual <code>fetch</code></td><td>React SPA + mobile app (React Native), query caching, realtime via WebSocket</td></tr>
+          <tr><td>Client</td><td>React SPA with client-side routing (<code>react-router</code>): marketing landing page, load list, load detail page, docs page, manual <code>fetch</code></td><td>React SPA + mobile app (React Native), query caching, realtime via WebSocket</td></tr>
           <tr><td>Backend</td><td>One monolithic FastAPI service</td><td>Core service + eight AI services, decoupled via an event bus</td></tr>
-          <tr><td>Database</td><td>One PostgreSQL, 2 tables (<code>users</code>, <code>loads</code>), schema under Alembic migrations</td><td>PostgreSQL (OLTP) + pgvector/vector store + Redis (cache/queues) + object storage for documents</td></tr>
-          <tr><td>Authentication</td><td>Email + password, JWT with no refresh</td><td>JWT + refresh tokens, MFA, SSO for enterprise accounts</td></tr>
+          <tr><td>Database</td><td>One PostgreSQL, 3 tables (<code>users</code>, <code>loads</code>, <code>refresh_tokens</code>), schema under Alembic migrations</td><td>PostgreSQL (OLTP) + pgvector/vector store + Redis (cache/queues) + object storage for documents</td></tr>
+          <tr><td>Authentication</td><td>Email + password, short-lived JWT (15 min) + a revocable, rotating refresh token (section 9)</td><td>Refresh token in an httpOnly cookie instead of <code>localStorage</code>, MFA, SSO for enterprise accounts</td></tr>
           <tr><td>Load matching</td><td>MVP: deterministic heuristic against the carrier's history (section 7.3)</td><td>ML ranking tuned to carrier profile</td></tr>
-          <tr><td>AI features</td><td>2 of 7 — NL Search and Smart Matching, both MVP with no ML/embeddings (sections 7.3/7.6)</td><td>7 AI services (section 7)</td></tr>
+          <tr><td>AI features</td><td>3 of 7 — NL Search, Smart Matching, and ETA, all MVP with no ML/embeddings (sections 7.3/7.6/7.7)</td><td>7 AI services (section 7)</td></tr>
           <tr><td>Infrastructure</td><td>Docker Compose, single host</td><td>Kubernetes, multiple environments, autoscaling</td></tr>
           <tr><td>Observability</td><td>None — just <code>uvicorn</code> logs to stdout</td><td>Metrics, tracing, structured logs, alerting, AI-eval pipelines</td></tr>
         </tbody>
@@ -1452,9 +1454,11 @@ CREATE TABLE documents (
         <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
         <tbody>
           <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Liveness check</td><td>—</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Sign up (email, password, company, role)</td><td>—</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Log in, issues a JWT valid 7 days</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Sign up (email, password, company, role) — issues an access+refresh pair</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Log in — issues an access JWT (15 min) + refresh token pair</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Current user from the token</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Exchange a valid refresh token for a new pair (rotation, section 9)</td><td>—</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/logout</code></td><td>Revoke a refresh token</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>List loads, optional <code>?status=</code> filter</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads/{id}</code></td><td>Single-load detail — backs the frontend's detail page</td><td>—</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Post a load — shipper role only, <code>shipper_id</code> comes from the token</td><td>Bearer</td></tr>
@@ -1477,7 +1481,6 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/offers/{id}/counter</code></td><td>Counter-offer</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/companies/{id}/trust-score</code></td><td>Trust score with explained factors</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/documents</code></td><td>Upload BOL/POD/rate confirmation</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/auth/refresh</code></td><td>Refresh the access token</td></tr>
           <tr><td><code>WS</code></td><td><code>/ws/notifications</code></td><td>Realtime notifications: new offers, status changes</td></tr>
         </tbody>
       </table>
@@ -1485,7 +1488,7 @@ CREATE TABLE documents (
 
     <!-- 9 -->
     <h2 id="s9-en"><span class="num">09</span>Authentication, authorization &amp; roles</h2>
-    <p>Today: email+password → <code>bcrypt</code> hash → JWT (HS256, <code>sub</code>=email, 7-day expiry) via <code>python-jose</code>, no refresh token and no revocation (logging out just deletes the token from <code>localStorage</code> on the client — the token itself stays valid until it expires).</p>
+    <p>Today: email+password → <code>bcrypt</code> hash → a short-lived access JWT (HS256, <code>sub</code>=email, 15 min by default) via <code>python-jose</code> plus a separate refresh token (an opaque random string, stored in the DB only as a SHA-256 hash, <code>refresh_tokens</code> table). It rotates on every use (<code>POST /api/auth/refresh</code>) — the old refresh token dies the instant a new one is issued, so a stolen token that gets replayed after the legitimate client has already refreshed is a rejected reuse, not a silent second session. <code>POST /api/auth/logout</code> revokes it outright. The access JWT itself still can't be revoked (stateless by design), but the 15-minute window bounds the blast radius far more than 7 days did. The frontend refreshes the access token in the background, invisibly to the user (<code>AuthContext.tsx</code>). Both tokens live in <code>localStorage</code> — a deliberate simplification, not the target design (see below).</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Role</th><th>Can do today</th><th>Target (Phase 2+)</th></tr></thead>
@@ -1497,7 +1500,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Target improvements: a 15-minute <code>access_token</code> + a rotating httpOnly-cookie <code>refresh_token</code>, revocation via a Redis deny-list, MFA for enterprise accounts, SSO (OAuth2/OIDC) for large shipper accounts, scoped API keys for integrations (TMS connectors).</p>
+    <p>Target improvements: the refresh token moves to an httpOnly cookie instead of <code>localStorage</code> (closes the XSS-read exposure, needs CSRF protection alongside it), revocation moves to a Redis deny-list instead of a Postgres table (scale), MFA for enterprise accounts, SSO (OAuth2/OIDC) for large shipper accounts, scoped API keys for integrations (TMS connectors).</p>
 
     <!-- 10 -->
     <h2 id="s10-en"><span class="num">10</span>Security</h2>
@@ -1506,9 +1509,9 @@ CREATE TABLE documents (
         <thead><tr><th>Area</th><th>Current state</th><th>Target</th></tr></thead>
         <tbody>
           <tr><td>Secrets</td><td><code>JWT_SECRET</code> from an env var, code default <code>"dev-secret-change-me"</code></td><td>A secrets manager (Vault/AWS Secrets Manager), no defaults in code</td></tr>
-          <tr><td>CORS</td><td><code>allow_origins=["*"]</code>, all methods/headers</td><td>An explicit allowlist of production frontend domains</td></tr>
+          <tr><td>CORS</td><td>An explicit allowlist via <code>CORS_ORIGINS</code></td><td>Production frontend domains replace the default dev origin</td></tr>
           <tr><td>Rate limiting</td><td>None</td><td>At the API Gateway, tighter specifically on <code>/auth/*</code></td></tr>
-          <tr><td>Resource-level authorization</td><td>Missing (section 17)</td><td>Ownership checks (a shipper sees/edits only their own loads) on every mutating endpoint</td></tr>
+          <tr><td>Resource-level authorization</td><td>In place on the three mutating load endpoints (section 17, closed)</td><td>Same coverage extended as new resources appear (offers, documents)</td></tr>
           <tr><td>PII &amp; documents</td><td>N/A — no documents yet</td><td>Encryption at rest (S3 SSE), PII masking before LLM calls (section 7.8)</td></tr>
           <tr><td>Audit</td><td>None</td><td><code>audit_log</code>: who/what/when, plus a separate log of every AI message sent on the platform's behalf (section 7.1)</td></tr>
           <tr><td>Dependencies</td><td>Not scanned</td><td>Dependabot/<code>pip-audit</code> in CI, blocking on critical CVEs</td></tr>
@@ -1623,7 +1626,7 @@ CREATE TABLE documents (
         <tbody>
           <tr><td>1</td><td><s><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> didn't check authentication or role</s> — closed: all three now require a Bearer token and check role (section 8)</td><td>Was: anyone without a token could post/take/close loads</td><td><span class="pill pill--done">Closed</span></td></tr>
           <tr><td>2</td><td><s><code>loads.shipper_name</code>/<code>carrier_name</code> are free text, not FKs into <code>users</code></s> — closed: added <code>shipper_id</code>/<code>carrier_id</code> (section 5)</td><td>Was: load ownership couldn't be verified; the data was trivial to fake</td><td><span class="pill pill--done">Closed</span></td></tr>
-          <tr><td>3</td><td>JWT has no refresh and no revocation, default secret in code</td><td>A stolen token stays valid for up to 7 days; risk if a build ever ships with the default <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>3</td><td><s>JWT has no refresh and no revocation</s> — closed: a short-lived (15 min) access JWT plus a separate, revocable refresh token with rotation (section 9, <code>backend/app/core/security.py</code>). The default <code>JWT_SECRET</code> in code remains — a deliberate demo-only exception (security.md), don't forget to replace it before any shared/staging environment (see README)</td><td>Was: a stolen token stayed valid for 7 days with no way to revoke it</td><td><span class="pill pill--done">Closed</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td><s>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</s> — closed: Alembic (<code>backend/migrations/</code>), applied before the app starts in every environment (section 4)</td><td>Was: no managed path for evolving the schema against production data</td><td><span class="pill pill--done">Closed</span></td></tr>
           <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, <code>/api/search</code>, <code>/api/loads/matches</code>, <code>GET /api/loads/{id}</code>, and <code>GET /api/loads/{id}/eta</code> (24 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
@@ -1633,6 +1636,7 @@ CREATE TABLE documents (
           <tr><td>10</td><td><code>frontend/src/geocode.ts</code> calls Nominatim directly from the browser, no backend proxy, no rate limiting beyond an in-memory per-session cache — Nominatim's usage policy caps free use at roughly 1 request/second</td><td>Real production traffic risks getting the IP blocked by Nominatim</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>11</td><td><code>frontend/src/routing.ts</code> calls OSRM's public demo server directly from the browser — same shape of gap as item 10: no backend proxy, no rate limiting beyond an in-memory session cache; the server isn't meant for production traffic</td><td>No SLA/availability guarantee for real traffic</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>12</td><td><code>backend/app/core/eta.py</code> also calls Nominatim and OSRM's public demo server directly (from the backend now, for the ETA MVP, section 7.7) — same shape of gap as items 10–11, but now server-side traffic too; a process-lifetime in-memory cache (not per-session) softens the load somewhat but is no substitute for real rate limiting or a paid provider</td><td>Same blocking/no-SLA risk as items 10–11, now from the server side as well as the client</td><td><span class="pill pill--risk">P2</span></td></tr>
+          <tr><td>13</td><td>The refresh token (section 9) lives in <code>localStorage</code>, same as the access token before it — readable by any JS running on the page. Rotation (item 3 above) limits a stolen token to one use, but doesn't prevent the theft itself; the target design is an httpOnly cookie, invisible to client-side JS entirely, plus CSRF protection to go with it</td><td>An XSS anywhere on the site can steal a session for the refresh token's full lifetime (30 days by default), not just the access token's 15 minutes</td><td><span class="pill pill--risk">P2</span></td></tr>
         </tbody>
       </table>
     </div>

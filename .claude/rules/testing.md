@@ -29,7 +29,7 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-Right now there are seven test files: `backend/tests/test_health.py` (a
+Right now there are eight test files: `backend/tests/test_health.py` (a
 smoke test), `backend/tests/test_load_ownership.py` (auth/role/ownership
 on the three mutating load endpoints), `backend/tests/test_search.py`
 (NL search route — LLM filter application, keyword fallback when the LLM
@@ -47,8 +47,13 @@ instead of falling through to matching.py's route), and
 `backend/tests/test_eta.py` (arrival estimate — 404 for an unknown load,
 graceful degradation when the mocked routing call returns `None`, transit
 estimate without an arrival window for an open load, and the arrival
-window's math once a load is accepted) — still nowhere near coverage, just
-the slices that existed reasons to test first.
+window's math once a load is accepted), and `backend/tests/test_auth_refresh.py`
+(refresh-token rotation and revocation — register issues both an access and
+a refresh token, a used refresh token is rejected on replay, an expired one
+is rejected too — backdated directly via `SessionLocal` rather than waiting
+out `REFRESH_TOKEN_EXPIRE_DAYS`, and logout revokes a token so a later
+refresh with it 401s) — still nowhere near coverage, just the slices that
+existed reasons to test first.
 `backend/tests/conftest.py` holds the migration fixture above plus the
 shared `register_user(client, role)` helper (extracted out of
 `test_load_ownership.py` once `test_search.py` needed the same setup) — use
@@ -66,9 +71,9 @@ the same reason. This keeps tests deterministic and runnable in CI with no
 `ANTHROPIC_API_KEY` and no network access. Planned test scope beyond that is
 listed in
 `docs/technical-documentation.html` section 15 — endpoint authorization, NL
-search, matching, and load detail are now covered; the next gap is the load
-status transition itself (`open→accepted→completed`, e.g. completing a load
-that was never accepted).
+search, matching, load detail, and auth refresh/revocation are now covered;
+the next gap is the load status transition itself
+(`open→accepted→completed`, e.g. completing a load that was never accepted).
 
 ## Frontend
 
