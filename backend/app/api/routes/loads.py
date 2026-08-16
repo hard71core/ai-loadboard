@@ -84,6 +84,12 @@ def complete_load(
         raise HTTPException(status_code=404, detail="Load not found")
     if current_user.id not in (load.shipper_id, load.carrier_id):
         raise HTTPException(status_code=403, detail="Not authorized to complete this load")
+    if load.status != models.LoadStatus.accepted:
+        # Without this, an open load (carrier_id still None) could jump
+        # straight to completed — the shipper is always in
+        # (shipper_id, carrier_id) for their own load, accepted or not, so
+        # the ownership check above alone doesn't rule that out.
+        raise HTTPException(status_code=400, detail="Only an accepted load can be completed")
     load.status = models.LoadStatus.completed
     db.commit()
     db.refresh(load)

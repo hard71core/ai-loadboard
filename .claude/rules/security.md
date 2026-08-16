@@ -58,9 +58,23 @@ code.
   /api/auth/logout` revokes it outright. The access JWT itself is still
   unrevocable (it's stateless by design), but 15 minutes bounds the blast
   radius instead of 7 days. See `backend/tests/test_auth_refresh.py`.
+- ~~Backend test coverage is thin~~ — **fixed for the backend.** Every
+  `api/routes/*` module plus `core/eta.py` is at 100% line coverage,
+  `core/llm.py` and `core/security.py` are at ~98% (see
+  `.claude/rules/testing.md` for what's still deliberately uncovered and
+  why), 60 tests total. This included finding and fixing a real bug, not
+  just adding tests around existing behavior: `complete_load`
+  (`api/routes/loads.py`) checked ownership but not status, so a shipper
+  could mark their own still-`open` load `completed` directly, skipping
+  `accepted` entirely — closed by adding the missing status check;
+  `test_complete_rejects_a_load_that_was_never_accepted`
+  (`backend/tests/test_load_ownership.py`) is the regression test. Frontend
+  test coverage is unaffected by this — still zero, see below, that's a
+  separate, still-open gap.
 
-Both P0s and the JWT gap were tracked in `docs/technical-documentation.html`
-section 17, now marked closed there.
+Both P0s, the JWT gap, and the backend half of the test-coverage gap were
+tracked in `docs/technical-documentation.html` section 17, now marked
+closed there.
 
 **New trade-off this introduced, tracked as P2 (see below):** the refresh
 token is a plain string in `localStorage`, same as the access token before
@@ -83,10 +97,14 @@ but doesn't stop the theft itself the way an httpOnly cookie would.
   needs an actual XSS elsewhere first, and there's no known one, but this
   is the kind of gap that's cheap to close later and expensive to discover
   in an incident.
-- Backend test coverage is still thin — health check, loads auth/ownership,
-  search, matching, load detail, ETA, and auth refresh/rotation/revocation
-  (`backend/tests/`, see `.claude/rules/testing.md` for the full list). No
-  frontend tests exist. Tracked as P1.
+- No frontend tests exist at all — no Vitest, no Testing Library, nothing
+  wired into CI beyond `eslint`/`tsc`/`vite build` (see
+  `.claude/rules/testing.md`). The backend half of this gap is closed (see
+  "Resolved" above); this is what's left of it. Tracked as P1 — the same
+  reasoning as before applies with equal or more force now that the
+  frontend owns real logic of its own (`AuthContext.tsx`'s refresh/rotation
+  scheduling, `RouteMap.tsx`/`EtaWindow.tsx`'s fail-closed fallbacks), not
+  just rendering.
 - `POST /api/search` (`core/llm.py`) has no rate limiting, no per-request
   or per-period cost cap, and no auth requirement — once `NL_SEARCH_ENABLED`
   is turned on, anyone can trigger billed Anthropic API calls at will (the

@@ -339,7 +339,7 @@
       <p class="subtitle">Архітектура системи, доменна модель, AI-підсистема та інженерні рішення — від того, що вже працює, до того, що спроєктовано на масштаб.</p>
       <div class="meta-row">
         <span>Версія документа <b>0.1</b></span>
-        <span>Дата <b>16.08.2026</b></span>
+        <span>Дата <b>17.08.2026</b></span>
         <span>Статус продукту <b>MVP / демо</b></span>
         <span>Повʼязаний документ <b>Project Overview (для інвесторів)</b></span>
       </div>
@@ -916,16 +916,16 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Рівень</th><th>Інструмент</th><th>Що покриває</th><th>Статус</th></tr></thead>
         <tbody>
-          <tr><td>Unit (бекенд)</td><td>pytest</td><td>Схеми, бізнес-правила (напр. переходи статусу вантажу)</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>Unit (бекенд)</td><td>pytest</td><td>Схеми, бізнес-правила (переходи статусу вантажу), геокодування/маршрутизація (мокані <code>httpx</code>-виклики) — 99% покриття рядків <code>app/</code>, 60 тестів</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Unit (фронтенд)</td><td>Vitest + Testing Library</td><td>Компоненти, <code>AuthContext</code></td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
-          <tr><td>Інтеграційні</td><td>pytest + тестовий Postgres у Docker</td><td>Ендпоінти API наскрізь через БД</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
+          <tr><td>Інтеграційні</td><td>pytest + реальний Postgres у Docker</td><td>Ендпоінти API наскрізь через БД — той самий набір тестів, що й Unit вище; проєкт поки не розділяє ці два рівні окремими сьютами</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>E2E</td><td>Playwright</td><td>Реєстрація → публікація → взяття вантажу</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
           <tr><td>AI-eval</td><td>Власний харнес поверх зафіксованого набору кейсів</td><td>Якість Negotiation/Matching/Trust — регресія перед кожним релізом промпту чи моделі</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Навантажувальні</td><td>k6/Locust</td><td>Латентність під пік-навантаженням, черга подій під бекпресурою</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
         </tbody>
       </table>
     </div>
-    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів, <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>), <code>GET /api/loads/matches</code> (ранжування, роль, холодний старт), <code>GET /api/loads/{id}</code> (деталі, 404, регресійний тест на те, що <code>{load_id:int}</code> не "проковтує" <code>/matches</code>) і <code>GET /api/loads/{id}/eta</code> (виклик Nominatim/OSRM мокається так само, як Anthropic у тестах пошуку — 404, деградація при недоступному роутингу, вікно прибуття лише для прийнятих вантажів). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
+    <p>Сьогодні: <code>backend/tests</code> — 11 файлів, 60 тестів, 99% покриття рядків <code>app/</code> (кожен модуль <code>api/routes/*</code> і <code>core/eta.py</code> — 100%): health-check; auth/роль/власність на трьох мутуючих ендпоінтах вантажів разом із повним переходом статусів (<code>open→accepted→completed</code>, включно з тим, що вантаж не можна завершити, не взявши його спершу — цієї перевірки бракувало до цього заходу, закрито в тій самій зміні, розділ 17); <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту, включно з власною гілкою відмови — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>); <code>GET /api/loads/matches</code> (ранжування, роль, холодний старт); <code>GET /api/loads/{id}</code> (деталі, 404, регресійний тест на те, що <code>{load_id:int}</code> не "проковтує" <code>/matches</code>); <code>GET /api/loads/{id}/eta</code> на двох рівнях — сам ендпоінт (мокана <code>estimate_transit</code>) і евристика під ним (<code>core/eta.py</code>, мокан <code>httpx.get</code> — реальна логіка геокодування/маршрутизації/кешу/фолбеків виконується насправді); і повний цикл refresh-токена (видача, ротація, відхилення повторного використання, відкликання). Фронтенд — жодного файлу <code>*.test.*</code>, і це тепер єдиний суттєвий розрив у тестуванні (розділ 17).</p>
 
     <!-- 16 -->
     <h2 id="s16"><span class="num">16</span>Технічна дорожня карта</h2>
@@ -953,7 +953,7 @@ CREATE TABLE documents (
           <tr><td>3</td><td><s>JWT без refresh і без відкликання</s> — закрито: короткоживучий (15 хв) access-JWT + окремий revocable refresh-токен з ротацією (розділ 9, <code>backend/app/core/security.py</code>). Дефолтний <code>JWT_SECRET</code> у коді лишається — свідомий виняток лише для демо (security.md), не забути замінити перед будь-яким спільним/staging-оточенням (див. README)</td><td>Було: вкрадений токен дійсний 7 днів без способу його відкликати</td><td><span class="pill pill--done">Закрито</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td><s>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</s> — закрито: Alembic (<code>backend/migrations/</code>), застосовується перед стартом застосунку в усіх середовищах (розділ 4)</td><td>Було: немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--done">Закрито</span></td></tr>
-          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code>, <code>/api/search</code>, <code>/api/loads/matches</code>, <code>GET /api/loads/{id}</code> і <code>GET /api/loads/{id}/eta</code> (24 тести); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td><s>Тести бекенду тонкі</s> — закрито для бекенду: 99% покриття рядків <code>app/</code>, 60 тестів, розділ 15 (у процесі — знайдено й закрито реальний баг: <code>complete_load</code> дозволяв завершити вантаж, який ніколи не брали, розділ 15). Фронтенд — і досі жодного файлу <code>*.test.*</code>, це лишається відкритим</td><td>Було: більшість бізнес-логіки без регресійного захисту; фронтенд — досі так</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>Немає rate limiting на <code>/api/auth/*</code></td><td>Вразливість до brute-force підбору пароля</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>8</td><td>4 із 7 AI-сервісів — поки що специфікація, не код (реалізовано NL Search, Matching і ETA MVP, розділи 7.3/7.6/7.7 — усі три детерміністичні, без ML/embeddings)</td><td>Основна цінність продукту для інвестора здебільшого ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> без rate limiting і без per-request/per-period cost cap на виклики Anthropic (розділ 7.8 — «circuit breaker» ще не реалізовано)</td><td>Будь-хто без автентифікації може ініціювати необмежену кількість платних LLM-викликів</td><td><span class="pill pill--risk">P2</span></td></tr>
@@ -968,7 +968,7 @@ CREATE TABLE documents (
 
     <footer class="doc-footer">
       <span>AI Loadboard · Технічна документація v0.1</span>
-      <span>16.08.2026</span>
+      <span>17.08.2026</span>
     </footer>
 
   </main>
@@ -1016,7 +1016,7 @@ CREATE TABLE documents (
       <p class="subtitle">System architecture, data model, AI subsystem, and engineering decisions — from what's already running to what's designed for scale.</p>
       <div class="meta-row">
         <span>Document version <b>0.1</b></span>
-        <span>Date <b>2026-08-16</b></span>
+        <span>Date <b>2026-08-17</b></span>
         <span>Product status <b>MVP / demo</b></span>
         <span>Related document <b>Project Overview (for investors)</b></span>
       </div>
@@ -1592,16 +1592,16 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Level</th><th>Tool</th><th>Covers</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>Unit (backend)</td><td>pytest</td><td>Schemas, business rules (e.g. load status transitions)</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>Unit (backend)</td><td>pytest</td><td>Schemas, business rules (load status transitions), geocoding/routing (mocked <code>httpx</code> calls) — 99% line coverage of <code>app/</code>, 60 tests</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Unit (frontend)</td><td>Vitest + Testing Library</td><td>Components, <code>AuthContext</code></td><td><span class="pill pill--wip">Phase 2</span></td></tr>
-          <tr><td>Integration</td><td>pytest + a test Postgres in Docker</td><td>API endpoints end-to-end through the DB</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
+          <tr><td>Integration</td><td>pytest + a real Postgres in Docker</td><td>API endpoints end-to-end through the DB — the same test suite as Unit above; the project doesn't split these into separate suites yet</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>E2E</td><td>Playwright</td><td>Sign up → post → take a load</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
           <tr><td>AI eval</td><td>An in-house harness over a fixed case set</td><td>Negotiation/Matching/Trust quality — regression checks before every prompt or model release</td><td><span class="pill pill--research">R&amp;D</span></td></tr>
           <tr><td>Load</td><td>k6/Locust</td><td>Latency under peak load, event-queue behavior under backpressure</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
         </tbody>
       </table>
     </div>
-    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed), <code>GET /api/loads/matches</code> (ranking, role gating, cold start), <code>GET /api/loads/{id}</code> (detail, 404, a regression test that <code>{load_id:int}</code> doesn't swallow <code>/matches</code>), and <code>GET /api/loads/{id}/eta</code> (the Nominatim/OSRM call is mocked the same way as the Anthropic call in the search tests — 404, graceful degradation when routing is unavailable, arrival window only for accepted loads). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
+    <p>Today: <code>backend/tests</code> — 11 files, 60 tests, 99% line coverage across <code>app/</code> (every <code>api/routes/*</code> module and <code>core/eta.py</code> at 100%): the health check; auth/role/ownership on the three mutating load endpoints plus the full status transition (<code>open→accepted→completed</code>, including that a load can't be completed without being accepted first — that check was missing until this pass, closed in the same change, section 17); <code>POST /api/search</code> (the Anthropic call mocked at the import site, including its own failure branch — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed); <code>GET /api/loads/matches</code> (ranking, role gating, cold start); <code>GET /api/loads/{id}</code> (detail, 404, a regression test that <code>{load_id:int}</code> doesn't swallow <code>/matches</code>); <code>GET /api/loads/{id}/eta</code> at two layers — the route itself (<code>estimate_transit</code> mocked) and the heuristic underneath it (<code>core/eta.py</code>, <code>httpx.get</code> mocked — the actual geocoding/routing/caching/fail-closed logic runs for real); and the full refresh-token lifecycle (issuance, rotation, replay rejection, revocation). Frontend has no <code>*.test.*</code> files at all — now the one significant testing gap left (section 17).</p>
 
     <!-- 16 -->
     <h2 id="s16-en"><span class="num">16</span>Technical roadmap</h2>
@@ -1629,7 +1629,7 @@ CREATE TABLE documents (
           <tr><td>3</td><td><s>JWT has no refresh and no revocation</s> — closed: a short-lived (15 min) access JWT plus a separate, revocable refresh token with rotation (section 9, <code>backend/app/core/security.py</code>). The default <code>JWT_SECRET</code> in code remains — a deliberate demo-only exception (security.md), don't forget to replace it before any shared/staging environment (see README)</td><td>Was: a stolen token stayed valid for 7 days with no way to revoke it</td><td><span class="pill pill--done">Closed</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td><s>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</s> — closed: Alembic (<code>backend/migrations/</code>), applied before the app starts in every environment (section 4)</td><td>Was: no managed path for evolving the schema against production data</td><td><span class="pill pill--done">Closed</span></td></tr>
-          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, <code>/api/search</code>, <code>/api/loads/matches</code>, <code>GET /api/loads/{id}</code>, and <code>GET /api/loads/{id}/eta</code> (24 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td><s>Backend tests are thin</s> — closed for the backend: 99% line coverage of <code>app/</code>, 60 tests, section 15 (found and closed a real bug along the way: <code>complete_load</code> let a load be completed without ever being accepted, section 15). Frontend still has no <code>*.test.*</code> files at all — that part stays open</td><td>Was: most business logic had no regression safety net; still true for the frontend</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>No rate limiting on <code>/api/auth/*</code></td><td>Vulnerable to password brute-forcing</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>8</td><td>4 of 7 AI services are still a spec, not code (NL Search, Matching, and ETA MVP are built, sections 7.3/7.6/7.7 — all three deterministic, no ML/embeddings)</td><td>Most of the core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> has no rate limiting and no per-request/per-period cost cap on Anthropic calls (section 7.8's "circuit breaker" isn't built yet)</td><td>Anyone, unauthenticated, can trigger unlimited billed LLM calls</td><td><span class="pill pill--risk">P2</span></td></tr>
@@ -1644,7 +1644,7 @@ CREATE TABLE documents (
 
     <footer class="doc-footer">
       <span>AI Loadboard · Technical Documentation v0.1</span>
-      <span>2026-08-16</span>
+      <span>2026-08-17</span>
     </footer>
 
   </main>

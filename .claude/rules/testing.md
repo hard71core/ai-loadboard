@@ -29,13 +29,33 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-Right now there are eight test files: `backend/tests/test_health.py` (a
-smoke test), `backend/tests/test_load_ownership.py` (auth/role/ownership
-on the three mutating load endpoints), `backend/tests/test_search.py`
-(NL search route — LLM filter application, keyword fallback when the LLM
-path is unavailable, empty-query rejection), `backend/tests/test_llm.py`
-(the `NL_SEARCH_ENABLED` gate itself — asserts the Anthropic client never
-gets constructed when the flag is off or the key is missing, no DB needed),
+**Coverage is 99% line coverage across `app/`, 60 tests, as of the test-coverage
+pass that closed this out** (`pytest --cov=app --cov-report=term-missing`
+reports it per-module) — every `api/routes/*` module and `core/eta.py` at
+100%, `core/llm.py` and `core/security.py` at ~98%. The two remaining gaps
+are deliberate, not oversights: `core/security.py`'s `rotate_refresh_token`
+has an `if not user: return None` guard for a `refresh_tokens` row whose
+`user_id` points nowhere — unreachable in practice because
+`refresh_tokens.user_id` is a foreign key into `users.id`, so referential
+integrity already guarantees the row exists; forcing that branch would mean
+bypassing the FK constraint just to hit one defensive line, not a
+meaningful test. `main.py`'s demo-seed-data branch
+(`if db.query(models.Load).count() == 0: ...`) only runs against a genuinely
+empty `loads` table, which no test in a shared/persistent local Postgres
+can reliably arrange without clearing state other tests depend on; CI's
+fresh DB does exercise it, just not as a targeted unit test.
+
+There are eleven test files: `backend/tests/test_health.py` (a smoke test),
+`backend/tests/test_load_ownership.py` (auth/role/ownership on the three
+mutating load endpoints, plus the full status-transition state machine —
+404s on accept/complete for an unknown load, accepting an already-taken
+load, completing a load that was never accepted, completing an
+already-completed load), `backend/tests/test_search.py` (NL search route —
+LLM filter application across every `SearchFilter` field, not just
+`equipment_type`, keyword fallback when the LLM path is unavailable,
+empty-query rejection), `backend/tests/test_llm.py` (the
+`NL_SEARCH_ENABLED` gate itself, plus the Anthropic call's own fail-closed
+branch when it raises — no DB needed),
 `backend/tests/test_matching.py` (smart matching — role gating, cold-start
 carriers get the plain open list, a carrier with history ranks a matching
 load above an unrelated one), `backend/tests/test_load_detail.py`
@@ -43,17 +63,26 @@ load above an unrelated one), `backend/tests/test_load_detail.py`
 regression test that it doesn't shadow `GET /api/loads/matches`; that last
 one caught a real bug during development — a bare `{load_id}` path matches
 *any* string at Starlette's routing layer, including "matches", and 422s
-instead of falling through to matching.py's route), and
-`backend/tests/test_eta.py` (arrival estimate — 404 for an unknown load,
-graceful degradation when the mocked routing call returns `None`, transit
-estimate without an arrival window for an open load, and the arrival
-window's math once a load is accepted), and `backend/tests/test_auth_refresh.py`
-(refresh-token rotation and revocation — register issues both an access and
-a refresh token, a used refresh token is rejected on replay, an expired one
-is rejected too — backdated directly via `SessionLocal` rather than waiting
-out `REFRESH_TOKEN_EXPIRE_DAYS`, and logout revokes a token so a later
-refresh with it 401s) — still nowhere near coverage, just the slices that
-existed reasons to test first.
+instead of falling through to matching.py's route),
+`backend/tests/test_eta.py` (arrival estimate route — 404 for an unknown
+load, graceful degradation when the mocked routing call returns `None`,
+transit estimate without an arrival window for an open load, and the
+arrival window's math once a load is accepted), `backend/tests/test_eta_core.py`
+(one layer lower than test_eta.py — mocks `httpx.get` instead of
+`estimate_transit` wholesale, so `core/eta.py`'s actual geocoding/routing/
+caching/fail-closed logic runs for real: Nominatim/OSRM success, empty
+results, network errors, HTTP error status, and the in-memory cache
+actually short-circuiting a second call), `backend/tests/test_auth.py`
+(register/login/me and their failure branches — duplicate email, wrong
+password, no token, a malformed token, a validly-signed token for a
+nonexistent user, a validly-signed token with no `sub` claim at all),
+`backend/tests/test_auth_refresh.py` (refresh-token rotation and
+revocation — register issues both an access and a refresh token, a used
+refresh token is rejected on replay, an expired one is rejected too —
+backdated directly via `SessionLocal` rather than waiting out
+`REFRESH_TOKEN_EXPIRE_DAYS`, and logout revokes a token so a later refresh
+with it 401s).
+
 `backend/tests/conftest.py` holds the migration fixture above plus the
 shared `register_user(client, role)` helper (extracted out of
 `test_load_ownership.py` once `test_search.py` needed the same setup) — use
@@ -67,13 +96,12 @@ the import site (`app.api.routes.search.parse_search_query`), not the
 definition site (`app.core.llm.parse_search_query`) — patching the
 definition doesn't affect the name already imported into `search.py`.
 `test_eta.py` mocks `app.api.routes.eta.estimate_transit` the same way, for
-the same reason. This keeps tests deterministic and runnable in CI with no
-`ANTHROPIC_API_KEY` and no network access. Planned test scope beyond that is
-listed in
-`docs/technical-documentation.html` section 15 — endpoint authorization, NL
-search, matching, load detail, and auth refresh/revocation are now covered;
-the next gap is the load status transition itself
-(`open→accepted→completed`, e.g. completing a load that was never accepted).
+the same reason; `test_eta_core.py` instead mocks `app.core.eta.httpx.get`
+directly (see its module docstring for why both layers earn their keep —
+one tests the route's response shape, the other tests the actual
+provider-facing logic). This keeps tests deterministic and runnable in CI
+with no `ANTHROPIC_API_KEY` and no network access. Planned test scope
+beyond this is listed in `docs/technical-documentation.html` section 15.
 
 ## Frontend
 

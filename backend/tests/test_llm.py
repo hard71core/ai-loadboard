@@ -43,3 +43,19 @@ def test_parse_search_query_calls_anthropic_when_enabled_and_configured(monkeypa
 
     mock_client.assert_called_once_with(api_key="sk-ant-a-real-looking-key")
     assert result == "sentinel-filter"
+
+
+def test_parse_search_query_returns_none_when_the_anthropic_call_raises(monkeypatch):
+    """Fail-closed on a live-call failure too, not just a missing key/flag —
+    a timeout, a rate limit, an outage, whatever. api/routes/search.py's
+    keyword fallback depends on this never propagating an exception."""
+    monkeypatch.setenv("NL_SEARCH_ENABLED", "true")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-a-real-looking-key")
+
+    mock_client_instance = MagicMock()
+    mock_client_instance.messages.parse.side_effect = RuntimeError("Anthropic is down")
+
+    with patch("app.core.llm.anthropic.Anthropic", return_value=mock_client_instance):
+        result = parse_search_query("reefer out of Dallas")
+
+    assert result is None

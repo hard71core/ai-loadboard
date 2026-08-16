@@ -83,6 +83,40 @@ def test_search_applies_llm_filter():
     assert all(load["equipment_type"] == "Reefer" for load in body)
 
 
+def test_search_applies_every_llm_filter_field():
+    """test_search_applies_llm_filter above only sets equipment_type — this
+    covers the rest of SearchFilter's fields (origin/destination/price_max/
+    weight_min/weight_max), each applied as its own SQLAlchemy filter in
+    api/routes/search.py."""
+    narrow_filter = schemas.SearchFilter(
+        origin="Dallas",
+        destination="Houston",
+        price_max=900,
+        weight_min=30000,
+        weight_max=40000,
+    )
+    with patch("app.api.routes.search.parse_search_query", return_value=narrow_filter):
+        with TestClient(app) as client:
+            token, _ = register_user(client, "shipper")
+            matching = _post_load(client, token, title="Narrow filter match")
+            wrong_origin = _post_load(
+                client, token, title="Narrow filter wrong origin", origin="Atlanta, GA"
+            )
+            too_expensive = _post_load(
+                client, token, title="Narrow filter too expensive", price_usd=1500
+            )
+            too_light = _post_load(client, token, title="Narrow filter too light", weight_lbs=5000)
+
+            res = client.post("/api/search", json={"query": "narrow filter probe"})
+
+    assert res.status_code == 200, res.text
+    ids = {load["id"] for load in res.json()}
+    assert matching["id"] in ids
+    assert wrong_origin["id"] not in ids
+    assert too_expensive["id"] not in ids
+    assert too_light["id"] not in ids
+
+
 def test_search_rejects_empty_query():
     with TestClient(app) as client:
         res = client.post("/api/search", json={"query": ""})
