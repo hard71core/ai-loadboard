@@ -171,6 +171,7 @@
   li { margin: .28rem 0; }
   li::marker { color: var(--ink-muted); }
   strong { color: var(--ink); }
+  s { color: var(--ink-muted); text-decoration-color: var(--critical); }
 
   code {
     font-family: var(--mono); font-size: .87em;
@@ -531,14 +532,17 @@
     <p>Поточна схема — дві таблиці, свідомо мінімальні для MVP:</p>
     <pre><code>-- backend/app/models.py — те, що реально існує сьогодні
 
-users(id, email UNIQUE, hashed_password, company_name, role ENUM(shipper|carrier), created_at)
+users(id, email UNIQUE, hashed_password, company_name,
+      role ENUM(shipper|carrier), created_at)
 
 loads(id, title, origin, destination, equipment_type DEFAULT 'Dry Van',
-      weight_lbs, price_usd NUMERIC(10,2), shipper_name, carrier_name NULLABLE,
+      weight_lbs, price_usd NUMERIC(10,2),
+      shipper_id FK→users NULLABLE, carrier_id FK→users NULLABLE,
+      shipper_name, carrier_name NULLABLE,
       status ENUM(open|accepted|completed), created_at)</code></pre>
 
-    <div class="note risk">
-      <strong>Помітний розрив зараз:</strong> <code>loads.shipper_name</code> і <code>carrier_name</code> — вільні текстові поля, не зовнішні ключі на <code>users</code>. Вантаж технічно не привʼязаний до автентифікованого користувача, який його опублікував чи взяв. Це працює для демо, але перше, що змінюється в Фазі 2 — <code>shipper_id</code>/<code>carrier_id</code> як FK з перевіркою власності на рівні API. Деталі — розділ 17.
+    <div class="note">
+      <strong>Вирішено (достроково, ще у Фазі MVP):</strong> <code>loads</code> тепер має <code>shipper_id</code>/<code>carrier_id</code> як FK на <code>users</code> — вантаж пов'язаний з автентифікованим користувачем, який його опублікував чи взяв, і саме на це посилання спираються перевірки власності на рівні API (розділ 8). <code>shipper_name</code>/<code>carrier_name</code> лишаються — це денормалізований кеш для відображення, тепер завжди встановлюється сервером із <code>company_name</code> власника, а не клієнтом. Було P0 у розділі 17, тепер закрито.
     </div>
 
     <h3>Цільова схема (Фаза 2–3)</h3>
@@ -766,13 +770,12 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Вхід, видає JWT на 7 днів</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Поточний користувач за токеном</td><td>Bearer</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>Список вантажів, опційний фільтр <code>?status=</code></td><td>—</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Публікація вантажу</td><td>— <span class="pill pill--risk">має бути Bearer</span></td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Взяти вантаж напряму</td><td>— <span class="pill pill--risk">має бути Bearer</span></td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Позначити завершеним</td><td>— <span class="pill pill--risk">має бути Bearer</span></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Публікація вантажу — тільки роль <code>shipper</code>, <code>shipper_id</code> береться з токена</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Взяти вантаж напряму — тільки роль <code>carrier</code>, <code>carrier_id</code> береться з токена</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Позначити завершеним — лише shipper вантажу або carrier, що його взяв</td><td>Bearer</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="note risk"><strong>Розбіжність із README:</strong> публічний опис демо каже «доступно тільки авторизованим shipper/carrier», але в коді (<code>main.py</code>) ці три роути не мають <code>Depends(get_current_user)</code> і не перевіряють роль — сьогодні їх може викликати будь-хто без токена. Це перший пункт у розділі 17.</div>
 
     <h3>Заплановані ендпоінти (Фаза 2–3)</h3>
     <div class="table-wrap">
@@ -798,7 +801,7 @@ CREATE TABLE documents (
     <p>Сьогодні: email+пароль → <code>bcrypt</code>-хеш → JWT (HS256, <code>sub</code>=email, термін дії 7 днів) з <code>python-jose</code>, без refresh-токена й без відкликання (вихід — лише видалення токена з <code>localStorage</code> на клієнті, сам токен лишається дійсним до сплину терміну).</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Роль</th><th>Може сьогодні (за наміром)</th><th>Ціль (Фаза 2+)</th></tr></thead>
+        <thead><tr><th>Роль</th><th>Може сьогодні</th><th>Ціль (Фаза 2+)</th></tr></thead>
         <tbody>
           <tr><td>shipper</td><td>Публікувати вантаж</td><td>+ бачити оферти, вести переговори, бачити trust-скор перевізника</td></tr>
           <tr><td>carrier</td><td>Брати відкритий вантаж</td><td>+ AI-рекомендації, робити контрпропозиції, завантажувати POD</td></tr>
@@ -931,18 +934,18 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>#</th><th>Проблема</th><th>Вплив</th><th>Пріоритет</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> не перевіряють автентифікацію чи роль, попри те що README це обіцяє</td><td>Будь-хто без токена може публікувати/забирати/закривати вантажі</td><td><span class="pill pill--risk">P0</span></td></tr>
-          <tr><td>2</td><td><code>loads.shipper_name</code>/<code>carrier_name</code> — вільний текст, не FK на <code>users</code></td><td>Неможливо перевірити власність вантажу; дані легко підробити</td><td><span class="pill pill--risk">P0</span></td></tr>
+          <tr><td>1</td><td><s><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> не перевіряли автентифікацію чи роль</s> — закрито: усі три вимагають Bearer-токен і перевіряють роль (розділ 8)</td><td>Було: будь-хто без токена міг публікувати/забирати/закривати вантажі</td><td><span class="pill pill--done">Закрито</span></td></tr>
+          <tr><td>2</td><td><s><code>loads.shipper_name</code>/<code>carrier_name</code> — вільний текст, не FK на <code>users</code></s> — закрито: додано <code>shipper_id</code>/<code>carrier_id</code> (розділ 5)</td><td>Було: неможливо перевірити власність вантажу; дані легко підробити</td><td><span class="pill pill--done">Закрито</span></td></tr>
           <tr><td>3</td><td>JWT без refresh і без відкликання, дефолтний секрет у коді</td><td>Вкрадений токен дійсний до 7 днів; ризик при випадковому деплої з дефолтним <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</td><td>Немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>Немає тестів (бекенд і фронтенд)</td><td>Регресії не ловляться до продакшну</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Тести бекенду — лише health-check і auth/ownership на <code>loads</code> (7 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>Немає rate limiting на <code>/api/auth/*</code></td><td>Вразливість до brute-force підбору пароля</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>8</td><td>AI-сервіси — поки що специфікація, не код</td><td>Основна цінність продукту для інвестора ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
         </tbody>
       </table>
     </div>
-    <p>Пункти 1–2 — перше, що варто закрити перед будь-яким публічним доступом до демо, навіть до початку роботи над AI: без FK-звʼязку вантажу з власником неможливо коректно побудувати ані trust scoring, ані персоналізований matching, ані журнал переговорів — вся AI-підсистема з розділу 7 неявно покладається на те, що це буде виправлено в Фазі 2.</p>
+    <p>Пункти 1–2 закрито до початку роботи над AI, як і планувалося: без FK-звʼязку вантажу з власником неможливо було б коректно побудувати ані trust scoring, ані персоналізований matching, ані журнал переговорів — уся AI-підсистема з розділу 7 спирається саме на цей звʼязок.</p>
 
     <footer class="doc-footer">
       <span>AI Loadboard · Технічна документація v0.1</span>
@@ -1186,14 +1189,17 @@ CREATE TABLE documents (
     <p>The current schema is two tables, deliberately minimal for the MVP:</p>
     <pre><code>-- backend/app/models.py — what actually exists today
 
-users(id, email UNIQUE, hashed_password, company_name, role ENUM(shipper|carrier), created_at)
+users(id, email UNIQUE, hashed_password, company_name,
+      role ENUM(shipper|carrier), created_at)
 
 loads(id, title, origin, destination, equipment_type DEFAULT 'Dry Van',
-      weight_lbs, price_usd NUMERIC(10,2), shipper_name, carrier_name NULLABLE,
+      weight_lbs, price_usd NUMERIC(10,2),
+      shipper_id FK→users NULLABLE, carrier_id FK→users NULLABLE,
+      shipper_name, carrier_name NULLABLE,
       status ENUM(open|accepted|completed), created_at)</code></pre>
 
-    <div class="note risk">
-      <strong>A notable gap right now:</strong> <code>loads.shipper_name</code> and <code>carrier_name</code> are free-text fields, not foreign keys into <code>users</code>. A load isn't technically tied to the authenticated user who posted or took it. That's fine for a demo, but it's the first thing that changes in Phase 2 — <code>shipper_id</code>/<code>carrier_id</code> as FKs with ownership checks at the API layer. Details in section 17.
+    <div class="note">
+      <strong>Resolved (ahead of schedule, still within the MVP phase):</strong> <code>loads</code> now has <code>shipper_id</code>/<code>carrier_id</code> as FKs into <code>users</code> — a load is tied to the authenticated user who posted or took it, and API-level ownership checks (section 8) rely on exactly that link. <code>shipper_name</code>/<code>carrier_name</code> stay as a denormalized display cache, now always set server-side from the owner's <code>company_name</code> rather than by the client. Was P0 in section 17, now closed.
     </div>
 
     <h3>Target schema (Phase 2–3)</h3>
@@ -1421,13 +1427,12 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Log in, issues a JWT valid 7 days</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Current user from the token</td><td>Bearer</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>List loads, optional <code>?status=</code> filter</td><td>—</td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Post a load</td><td>— <span class="pill pill--risk">should require Bearer</span></td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Take a load directly</td><td>— <span class="pill pill--risk">should require Bearer</span></td></tr>
-          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Mark completed</td><td>— <span class="pill pill--risk">should require Bearer</span></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Post a load — shipper role only, <code>shipper_id</code> comes from the token</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Take a load directly — carrier role only, <code>carrier_id</code> comes from the token</td><td>Bearer</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Mark completed — only the load's shipper or the carrier who took it</td><td>Bearer</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="note risk"><strong>Mismatch with the README:</strong> the public demo description says "only available to authenticated shipper/carrier accounts," but in the code (<code>main.py</code>) these three routes have no <code>Depends(get_current_user)</code> and don't check role — today anyone can call them without a token. This is the first item in section 17.</div>
 
     <h3>Planned endpoints (Phase 2–3)</h3>
     <div class="table-wrap">
@@ -1453,7 +1458,7 @@ CREATE TABLE documents (
     <p>Today: email+password → <code>bcrypt</code> hash → JWT (HS256, <code>sub</code>=email, 7-day expiry) via <code>python-jose</code>, no refresh token and no revocation (logging out just deletes the token from <code>localStorage</code> on the client — the token itself stays valid until it expires).</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Role</th><th>Can do today (by design intent)</th><th>Target (Phase 2+)</th></tr></thead>
+        <thead><tr><th>Role</th><th>Can do today</th><th>Target (Phase 2+)</th></tr></thead>
         <tbody>
           <tr><td>shipper</td><td>Post a load</td><td>+ see offers, negotiate, see the carrier's trust score</td></tr>
           <tr><td>carrier</td><td>Take an open load</td><td>+ AI recommendations, counter-offer, upload POD</td></tr>
@@ -1586,18 +1591,18 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>#</th><th>Issue</th><th>Impact</th><th>Priority</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> don't check authentication or role, despite what the README promises</td><td>Anyone without a token can post/take/close loads</td><td><span class="pill pill--risk">P0</span></td></tr>
-          <tr><td>2</td><td><code>loads.shipper_name</code>/<code>carrier_name</code> are free text, not FKs into <code>users</code></td><td>Load ownership can't be verified; the data is trivial to fake</td><td><span class="pill pill--risk">P0</span></td></tr>
+          <tr><td>1</td><td><s><code>POST /api/loads</code>, <code>/accept</code>, <code>/complete</code> didn't check authentication or role</s> — closed: all three now require a Bearer token and check role (section 8)</td><td>Was: anyone without a token could post/take/close loads</td><td><span class="pill pill--done">Closed</span></td></tr>
+          <tr><td>2</td><td><s><code>loads.shipper_name</code>/<code>carrier_name</code> are free text, not FKs into <code>users</code></s> — closed: added <code>shipper_id</code>/<code>carrier_id</code> (section 5)</td><td>Was: load ownership couldn't be verified; the data was trivial to fake</td><td><span class="pill pill--done">Closed</span></td></tr>
           <tr><td>3</td><td>JWT has no refresh and no revocation, default secret in code</td><td>A stolen token stays valid for up to 7 days; risk if a build ever ships with the default <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</td><td>No managed path for evolving the schema against production data</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>No tests (backend or frontend)</td><td>Regressions aren't caught before production</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Backend tests cover only the health check and loads auth/ownership (7 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>No rate limiting on <code>/api/auth/*</code></td><td>Vulnerable to password brute-forcing</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>8</td><td>AI services are still a spec, not code</td><td>The core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
         </tbody>
       </table>
     </div>
-    <p>Items 1–2 are the first things worth closing before any public access to the demo, even before AI work starts: without an FK link between a load and its owner, you can't correctly build trust scoring, personalized matching, or a negotiation log — the entire AI subsystem in section 7 implicitly assumes this gets fixed in Phase 2.</p>
+    <p>Items 1–2 are closed, ahead of AI work as planned: without an FK link between a load and its owner, trust scoring, personalized matching, and a negotiation log couldn't have been built correctly — the entire AI subsystem in section 7 relies on exactly that link.</p>
 
     <footer class="doc-footer">
       <span>AI Loadboard · Technical Documentation v0.1</span>

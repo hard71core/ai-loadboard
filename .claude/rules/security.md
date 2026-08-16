@@ -25,22 +25,27 @@ code.
   `docs/technical-documentation.html` section 17 — don't quietly leave it
   unnoted, and don't quietly fix it either without flagging that you did.
 
-## Known gaps (already tracked — don't silently "fix" without flagging)
+## Resolved
 
-- **`POST /api/loads`, `/api/loads/{id}/accept`, `/api/loads/{id}/complete`
-  don't check authentication or role**, despite the README describing them
-  as restricted to authenticated shippers/carriers. Anyone can currently call
-  them without a token. Tracked as P0 in
-  `docs/technical-documentation.html` section 17.
-- **`loads.shipper_name` / `carrier_name` are free-text columns, not foreign
-  keys into `users`** (`backend/app/models.py`) — a load isn't actually
-  linked to the authenticated user who posted or took it, so ownership
-  checks can't be enforced correctly until this is fixed first. Also P0.
+- ~~`POST /api/loads`, `/api/loads/{id}/accept`, `/api/loads/{id}/complete`
+  don't check authentication or role~~ — **fixed.** All three now require a
+  Bearer token, check the caller's role (`shipper`/`carrier`), and
+  `complete` additionally checks the caller is the load's shipper or the
+  accepting carrier. See `backend/app/main.py`.
+- ~~`loads.shipper_name` / `carrier_name` are free-text columns, not foreign
+  keys into `users`~~ — **fixed.** `Load` now has `shipper_id`/`carrier_id`
+  FKs (`backend/app/models.py`), set server-side from the authenticated
+  user, never from the request body. `*_name` stays as a display cache,
+  also server-derived now.
+
+Both were P0 in `docs/technical-documentation.html` section 17, now marked
+closed there.
+
+## Known gaps (still open — don't silently "fix" without flagging)
+
 - Auth (`backend/app/auth.py`) is JWT (HS256, `python-jose`) with no refresh
   token and no revocation — a stolen token is valid for the full
   `JWT_EXPIRE_MINUTES` window (7 days by default). Tracked as P1.
-
-If you're asked to work on any of the three endpoints above, treat fixing
-the auth/ownership check as in scope by default rather than perpetuating the
-gap — but say clearly that's what you're doing, since it's a behavior change,
-not just tooling.
+- Backend test coverage is still thin — health check plus loads
+  auth/ownership only (`backend/tests/`). No frontend tests exist. Tracked
+  as P1.

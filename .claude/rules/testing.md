@@ -26,14 +26,18 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-Right now there is exactly one test, `backend/tests/test_health.py` — a
-smoke test that exists so CI has something real to run, not a coverage
-claim. When you add backend behavior, add a test for it in `backend/tests/`
-following that file's pattern (`fastapi.testclient.TestClient`, hit the
-route, assert on the response). Planned test scope beyond that is listed in
-`docs/technical-documentation.html` section 15 — the top priority there is
-covering the load status transition (`open→accepted→completed`) and endpoint
-authorization once that's implemented.
+Right now there are two test files: `backend/tests/test_health.py` (a
+smoke test) and `backend/tests/test_load_ownership.py` (auth/role/ownership
+on the three mutating load endpoints) — still nowhere near coverage, just
+the two slices that existed reasons to test first. When you add backend
+behavior, add a test for it in `backend/tests/` following their pattern
+(`fastapi.testclient.TestClient`, hit the route, assert on the response;
+use `uuid.uuid4()` in emails/company names if a test registers users, so
+repeat runs against a persistent local DB don't collide). Planned test scope
+beyond that is listed in `docs/technical-documentation.html` section 15 —
+endpoint authorization is now covered (`test_load_ownership.py`); the next
+gap is the load status transition itself (`open→accepted→completed`, e.g.
+completing a load that was never accepted).
 
 ## Frontend
 
