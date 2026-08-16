@@ -48,6 +48,53 @@ export function RouteIcon({ className }: IconProps) {
   );
 }
 
+export function SearchIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M20 20l-4.8-4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ClockIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 7.5V12l3.2 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function ShieldIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 3.5 5 6v6c0 4.4 3 7.4 7 8.5 4-1.1 7-4.1 7-8.5V6l-7-2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M9 12.2l2 2 4-4.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function DocIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M6 3h8l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M8 13h8M8 17h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function SparkleIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">

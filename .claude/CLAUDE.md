@@ -7,8 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A demo-stage, two-sided freight marketplace: a shipper posts a load, a carrier
 takes it directly — no broker. The backend is a plain FastAPI CRUD service
 (`backend/app/`) over two tables, the frontend is a React SPA (`frontend/`)
-with client-side routing (`react-router-dom`) — a load list at `/` and a
-load detail page at `/loads/:id`, not a single screen anymore.
+with client-side routing (`react-router-dom`) — a marketing landing page at
+`/`, the load list at `/loads`, a load detail page at `/loads/:id`, and an
+in-app docs page at `/docs`, not a single screen anymore.
 **Three of the 7 planned AI features have a working MVP**:
 natural-language load search (`POST /api/search`, `core/llm.py`, Claude
 Haiku 4.5, structured outputs, gated off by default behind
@@ -48,7 +49,11 @@ apply everywhere no matter what file you're touching.
   `docs/technical-documentation.pdf` to match (Chrome headless
   `--print-to-pdf`, as used to produce the current one). If you close an item
   in the section 17 tech-debt table, mark it resolved there instead of
-  leaving it stale.
+  leaving it stale. **Then copy both `docs/*.html` and both `docs/*.pdf`
+  into `frontend/public/docs/`, overwriting what's there** — the in-app
+  `/docs` page (`pages/DocsPage.tsx`) links to those copies, not the
+  originals, so skipping this step leaves the live site showing stale docs
+  even though the source of truth is current.
 - **Build it like a senior team would, not like a demo.** The bar is "would
   this pass review from a senior engineer," not "does it run once" — see
   `.claude/rules/code-style.md` and `.claude/rules/testing.md` for what that
@@ -176,11 +181,17 @@ preemptively.
 **Frontend layout** (`frontend/src/`):
 ```
 main.tsx            BrowserRouter + AuthProvider + App
-App.tsx             shell only — header/auth status, mounts <Routes>
+App.tsx             shell only — header/nav/auth status, mounts <Routes>
 constants.ts         STATUS_LABEL/ROLE_LABEL shared between pages
 pages/
-  LoadsPage.tsx       "/" — list, search, matches, the post-a-load form
+  HomePage.tsx        "/" — marketing landing page: hero, value props, the
+                       3 shipped AI features, how-it-works, CTA band; fetches
+                       GET /api/loads only for the hero's live load counts
+  LoadsPage.tsx       "/loads" — list, search, matches, the post-a-load form
   LoadDetailPage.tsx  "/loads/:id" — full detail for one load, accept action
+  DocsPage.tsx         "/docs" — links out to the static copies of
+                        docs/*.html + *.pdf under frontend/public/docs/ (see
+                        "Docs" below for the sync duty this creates)
 components/
   AuthPanel.tsx       login/register form, used from App's shell
   RouteMap.tsx        Leaflet map on the detail page — geocodes origin/
@@ -259,6 +270,16 @@ generated PDF twin:
   prioritized list of known technical debt — check it before "fixing"
   something that's already a tracked, deliberate decision, and update it if
   you close one of those items.
+
+`frontend/public/docs/` holds a **copy** of all four files above (both
+`.html`, both `.pdf`) — not a symlink, real duplicated files, because this
+is a demo with no production static-file host and no build pipeline beyond
+Vite's dev server; `pages/DocsPage.tsx` links to these copies so visitors
+can read the docs in-app without leaving the site. Vite serves anything
+under `frontend/public/` as-is at that same path (`/docs/technical-
+documentation.html`, etc.), and it works identically in Docker (bind-mounts
+`./frontend:/app`, no extra volume needed) and outside it — see the ground
+rule above for the copy step this creates every time `docs/*.html` changes.
 
 CI (`.github/workflows/ci.yml`) runs the backend job against a real
 `postgres:16-alpine` service container, not a mock — tests that need the DB

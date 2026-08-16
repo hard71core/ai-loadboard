@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { acceptLoad, createLoad, fetchLoads, fetchMatches, searchLoads } from "../api";
 import { useAuth } from "../AuthContext";
 import { STATUS_LABEL } from "../constants";
-import { useCountUp } from "../hooks/useCountUp";
-import { BoltIcon, PackageIcon, SparkleIcon } from "../icons";
+import { SparkleIcon } from "../icons";
 import type { Load, LoadCreatePayload } from "../types";
 
 interface FormState {
@@ -144,62 +143,17 @@ export default function LoadsPage({ openAuth }: Props) {
     }
   }
 
-  const openCount = loads.filter((l) => l.status === "open").length;
-  const totalCount = useCountUp(loads.length);
-  const animatedOpenCount = useCountUp(openCount);
-
   return (
     <>
-      <section className="hero">
-        <div className="hero-glow" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <div className="hero-inner">
-          <span className="eyebrow">
-            <span className="dot"></span>
-            <span className="eyebrow-text">AI-matched freight, zero broker markup</span>
-          </span>
-          <h1>
-            Post it. Match it. <span className="gradient-text">Move it.</span>
-          </h1>
-          <p className="hero-sub">
-            Shippers and carriers connect directly — natural-language search and
-            AI-ranked recommendations do the dispatcher's job, so freight moves
-            faster and margin stays where it belongs.
+      <div className="page-header">
+        <div className="page-header-inner">
+          <h1>Loads</h1>
+          <p className="muted">
+            Browse open freight, search it in plain English, or let matching
+            rank it against your own history.
           </p>
-          <div className="stats">
-            <div className="stat">
-              <span className="stat-icon">
-                <PackageIcon />
-              </span>
-              <div>
-                <div className="stat-value">{totalCount}</div>
-                <div className="stat-label">Total loads</div>
-              </div>
-            </div>
-            <div className="stat">
-              <span className="stat-icon">
-                <BoltIcon />
-              </span>
-              <div>
-                <div className="stat-value">{animatedOpenCount}</div>
-                <div className="stat-label">Open now</div>
-              </div>
-            </div>
-            <div className="stat">
-              <span className="stat-icon">
-                <SparkleIcon />
-              </span>
-              <div>
-                <div className="stat-value">0%</div>
-                <div className="stat-label">Broker markup</div>
-              </div>
-            </div>
-          </div>
         </div>
-      </section>
+      </div>
 
       <div className="container">
         <form className="search-bar" onSubmit={handleSearch}>

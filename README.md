@@ -110,6 +110,11 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
 
 ## What the demo does
 
+- Four pages: `/` (marketing landing page — hero, value props, the 3 shipped
+  AI features, how-it-works, a CTA band), `/loads` (the board itself),
+  `/loads/:id` (one load's full detail), and `/docs` (links out to the
+  in-app copies of both docs below, since this is a demo build and the
+  internal docs are published in the open rather than gated)
 - Sign up and log in (email + password, JWT), with a role picked at
   registration: **shipper** or **carrier**
 - List of open loads (route, equipment type, weight, rate, shipper) — click

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link, Route, Routes } from "react-router-dom";
+import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import AuthPanel from "./components/AuthPanel";
 import { ROLE_LABEL } from "./constants";
 import { BoltIcon } from "./icons";
+import DocsPage from "./pages/DocsPage";
+import HomePage from "./pages/HomePage";
 import LoadDetailPage from "./pages/LoadDetailPage";
 import LoadsPage from "./pages/LoadsPage";
 
@@ -28,6 +30,14 @@ export default function App() {
             </span>
             AI&nbsp;Loadboard
           </Link>
+          <nav className="site-nav">
+            <NavLink to="/loads" className={({ isActive }) => (isActive ? "active" : "")}>
+              Loads
+            </NavLink>
+            <NavLink to="/docs" className={({ isActive }) => (isActive ? "active" : "")}>
+              Docs
+            </NavLink>
+          </nav>
           <div className="auth-status">
             {authLoading ? null : user ? (
               <>
@@ -61,8 +71,10 @@ export default function App() {
       )}
 
       <Routes>
-        <Route path="/" element={<LoadsPage openAuth={openAuth} />} />
+        <Route path="/" element={<HomePage openAuth={openAuth} />} />
+        <Route path="/loads" element={<LoadsPage openAuth={openAuth} />} />
         <Route path="/loads/:id" element={<LoadDetailPage openAuth={openAuth} />} />
+        <Route path="/docs" element={<DocsPage />} />
       </Routes>
     </div>
   );
