@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { acceptLoad, createLoad, fetchLoads, fetchMatches, searchLoads } from "../api";
 import { useAuth } from "../AuthContext";
 import { STATUS_LABEL } from "../constants";
+import { useCountUp } from "../hooks/useCountUp";
+import { BoltIcon, PackageIcon, SparkleIcon } from "../icons";
 import type { Load, LoadCreatePayload } from "../types";
 
 interface FormState {
@@ -143,203 +145,257 @@ export default function LoadsPage({ openAuth }: Props) {
   }
 
   const openCount = loads.filter((l) => l.status === "open").length;
+  const totalCount = useCountUp(loads.length);
+  const animatedOpenCount = useCountUp(openCount);
 
   return (
     <>
-      <div className="stats">
-        <div className="stat">
-          <div className="stat-value">{loads.length}</div>
-          <div className="stat-label">Total loads</div>
+      <section className="hero">
+        <div className="hero-glow" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
         </div>
-        <div className="stat">
-          <div className="stat-value">{openCount}</div>
-          <div className="stat-label">Open now</div>
-        </div>
-      </div>
-
-      <form className="search-bar" onSubmit={handleSearch}>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search: e.g. “reefer out of Dallas under 900”"
-        />
-        <button className="btn primary" type="submit" disabled={searching}>
-          {searching ? "Searching…" : "Search"}
-        </button>
-        {searchActive && (
-          <button className="btn small" type="button" onClick={clearSearch}>
-            Clear search
-          </button>
-        )}
-      </form>
-
-      <div className="toolbar">
-        <h2>
-          {searchActive
-            ? "Search results"
-            : matchesActive
-              ? "Recommended for you"
-              : "Available loads"}
-        </h2>
-        {user?.role === "carrier" &&
-          (matchesActive ? (
-            <button className="btn small" onClick={clearMatches}>
-              Show all loads
-            </button>
-          ) : (
-            <button className="btn primary" onClick={handleShowMatches} disabled={loadingMatches}>
-              {loadingMatches ? "Finding matches…" : "★ Recommended for you"}
-            </button>
-          ))}
-        {user?.role === "shipper" && (
-          <button className="btn primary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? "Cancel" : "+ Post a load"}
-          </button>
-        )}
-        {!user && (
-          <button className="btn primary" onClick={() => openAuth("register")}>
-            Log in to post a load
-          </button>
-        )}
-      </div>
-
-      {error && <div className="alert">{error}</div>}
-
-      {showForm && user?.role === "shipper" && (
-        <form className="card form" onSubmit={handleCreate}>
-          <div className="form-grid">
-            <label>
-              Load description
-              <input
-                required
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g. Home appliances"
-              />
-            </label>
-            <label>
-              Origin
-              <input
-                required
-                value={form.origin}
-                onChange={(e) => setForm({ ...form, origin: e.target.value })}
-                placeholder="City, state"
-              />
-            </label>
-            <label>
-              Destination
-              <input
-                required
-                value={form.destination}
-                onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                placeholder="City, state"
-              />
-            </label>
-            <label>
-              Equipment type
-              <select
-                value={form.equipment_type}
-                onChange={(e) => setForm({ ...form, equipment_type: e.target.value })}
-              >
-                <option>Dry Van</option>
-                <option>Reefer</option>
-                <option>Flatbed</option>
-              </select>
-            </label>
-            <label>
-              Weight (lbs)
-              <input
-                required
-                type="number"
-                min="0"
-                value={form.weight_lbs}
-                onChange={(e) => setForm({ ...form, weight_lbs: e.target.value })}
-              />
-            </label>
-            <label>
-              Rate (USD)
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.price_usd}
-                onChange={(e) => setForm({ ...form, price_usd: e.target.value })}
-              />
-            </label>
+        <div className="hero-inner">
+          <span className="eyebrow">
+            <span className="dot"></span>
+            <span className="eyebrow-text">AI-matched freight, zero broker markup</span>
+          </span>
+          <h1>
+            Post it. Match it. <span className="gradient-text">Move it.</span>
+          </h1>
+          <p className="hero-sub">
+            Shippers and carriers connect directly — natural-language search and
+            AI-ranked recommendations do the dispatcher's job, so freight moves
+            faster and margin stays where it belongs.
+          </p>
+          <div className="stats">
+            <div className="stat">
+              <span className="stat-icon">
+                <PackageIcon />
+              </span>
+              <div>
+                <div className="stat-value">{totalCount}</div>
+                <div className="stat-label">Total loads</div>
+              </div>
+            </div>
+            <div className="stat">
+              <span className="stat-icon">
+                <BoltIcon />
+              </span>
+              <div>
+                <div className="stat-value">{animatedOpenCount}</div>
+                <div className="stat-label">Open now</div>
+              </div>
+            </div>
+            <div className="stat">
+              <span className="stat-icon">
+                <SparkleIcon />
+              </span>
+              <div>
+                <div className="stat-value">0%</div>
+                <div className="stat-label">Broker markup</div>
+              </div>
+            </div>
           </div>
-          <button className="btn primary" type="submit" disabled={submitting}>
-            {submitting ? "Posting…" : "Post load"}
-          </button>
-        </form>
-      )}
-
-      {loading ? (
-        <p className="muted">Loading…</p>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Route</th>
-                <th>Equipment</th>
-                <th>Weight</th>
-                <th>Rate</th>
-                <th>Shipper</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {loads.map((load) => (
-                <tr
-                  key={load.id}
-                  className="load-row"
-                  onClick={() => navigate(`/loads/${load.id}`)}
-                >
-                  <td>
-                    <b>{load.origin}</b> → <b>{load.destination}</b>
-                    <div className="small muted">{load.title}</div>
-                  </td>
-                  <td>{load.equipment_type}</td>
-                  <td>{load.weight_lbs.toLocaleString()} lbs</td>
-                  <td>${Number(load.price_usd).toFixed(2)}</td>
-                  <td>{load.shipper_name}</td>
-                  <td>
-                    <span className={`badge ${load.status}`}>{STATUS_LABEL[load.status]}</span>
-                    {load.carrier_name && (
-                      <div className="small muted">Carrier: {load.carrier_name}</div>
-                    )}
-                  </td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    {load.status === "open" &&
-                      (user?.role === "carrier" ? (
-                        <button
-                          className="btn small primary"
-                          onClick={() => handleAccept(load.id)}
-                        >
-                          Accept load
-                        </button>
-                      ) : !user ? (
-                        <button className="btn small" onClick={() => openAuth("register")}>
-                          Log in to accept
-                        </button>
-                      ) : null)}
-                  </td>
-                </tr>
-              ))}
-              {loads.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="muted">
-                    No loads yet. Post the first one.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
-      )}
+      </section>
+
+      <div className="container">
+        <form className="search-bar" onSubmit={handleSearch}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search: e.g. “reefer out of Dallas under 900”"
+          />
+          <button className="btn primary" type="submit" disabled={searching}>
+            {searching ? "Searching…" : "Search"}
+          </button>
+          {searchActive && (
+            <button className="btn small" type="button" onClick={clearSearch}>
+              Clear search
+            </button>
+          )}
+        </form>
+
+        <div className="toolbar">
+          <h2>
+            {searchActive
+              ? "Search results"
+              : matchesActive
+                ? "Recommended for you"
+                : "Available loads"}
+          </h2>
+          {user?.role === "carrier" &&
+            (matchesActive ? (
+              <button className="btn small" onClick={clearMatches}>
+                Show all loads
+              </button>
+            ) : (
+              <button className="btn primary" onClick={handleShowMatches} disabled={loadingMatches}>
+                <SparkleIcon />
+                {loadingMatches ? "Finding matches…" : "Recommended for you"}
+              </button>
+            ))}
+          {user?.role === "shipper" && (
+            <button className="btn primary" onClick={() => setShowForm((s) => !s)}>
+              {showForm ? "Cancel" : "+ Post a load"}
+            </button>
+          )}
+          {!user && (
+            <button className="btn primary" onClick={() => openAuth("register")}>
+              Log in to post a load
+            </button>
+          )}
+        </div>
+
+        {error && <div className="alert">{error}</div>}
+
+        {showForm && user?.role === "shipper" && (
+          <form className="card form" onSubmit={handleCreate}>
+            <div className="form-grid">
+              <label>
+                Load description
+                <input
+                  required
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g. Home appliances"
+                />
+              </label>
+              <label>
+                Origin
+                <input
+                  required
+                  value={form.origin}
+                  onChange={(e) => setForm({ ...form, origin: e.target.value })}
+                  placeholder="City, state"
+                />
+              </label>
+              <label>
+                Destination
+                <input
+                  required
+                  value={form.destination}
+                  onChange={(e) => setForm({ ...form, destination: e.target.value })}
+                  placeholder="City, state"
+                />
+              </label>
+              <label>
+                Equipment type
+                <select
+                  value={form.equipment_type}
+                  onChange={(e) => setForm({ ...form, equipment_type: e.target.value })}
+                >
+                  <option>Dry Van</option>
+                  <option>Reefer</option>
+                  <option>Flatbed</option>
+                </select>
+              </label>
+              <label>
+                Weight (lbs)
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  value={form.weight_lbs}
+                  onChange={(e) => setForm({ ...form, weight_lbs: e.target.value })}
+                />
+              </label>
+              <label>
+                Rate (USD)
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.price_usd}
+                  onChange={(e) => setForm({ ...form, price_usd: e.target.value })}
+                />
+              </label>
+            </div>
+            <button className="btn primary" type="submit" disabled={submitting}>
+              {submitting ? "Posting…" : "Post load"}
+            </button>
+          </form>
+        )}
+
+        {loading ? (
+          <div className="table-wrap skeleton-table">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div className="skeleton-row" key={i}>
+                <div className="skeleton"></div>
+                <div className="skeleton"></div>
+                <div className="skeleton"></div>
+                <div className="skeleton"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Route</th>
+                  <th>Equipment</th>
+                  <th>Weight</th>
+                  <th>Rate</th>
+                  <th>Shipper</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {loads.map((load) => (
+                  <tr
+                    key={load.id}
+                    className="load-row"
+                    onClick={() => navigate(`/loads/${load.id}`)}
+                  >
+                    <td>
+                      <b>{load.origin}</b> → <b>{load.destination}</b>
+                      <div className="small muted">{load.title}</div>
+                    </td>
+                    <td>{load.equipment_type}</td>
+                    <td>{load.weight_lbs.toLocaleString()} lbs</td>
+                    <td>${Number(load.price_usd).toFixed(2)}</td>
+                    <td>{load.shipper_name}</td>
+                    <td>
+                      <span className={`badge ${load.status}`}>{STATUS_LABEL[load.status]}</span>
+                      {load.carrier_name && (
+                        <div className="small muted">Carrier: {load.carrier_name}</div>
+                      )}
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {load.status === "open" &&
+                        (user?.role === "carrier" ? (
+                          <button
+                            className="btn small primary"
+                            onClick={() => handleAccept(load.id)}
+                          >
+                            Accept load
+                          </button>
+                        ) : !user ? (
+                          <button className="btn small" onClick={() => openAuth("register")}>
+                            Log in to accept
+                          </button>
+                        ) : null)}
+                    </td>
+                  </tr>
+                ))}
+                {loads.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="muted">
+                      No loads yet. Post the first one.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </>
   );
 }
