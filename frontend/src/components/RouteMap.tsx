@@ -78,7 +78,7 @@ export default function RouteMap({ origin, destination }: Props) {
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           />
           <Marker position={[originCoords.lat, originCoords.lng]} icon={originIcon}>
@@ -87,12 +87,21 @@ export default function RouteMap({ origin, destination }: Props) {
           <Marker position={[destCoords.lat, destCoords.lng]} icon={destinationIcon}>
             <Popup>{destination}</Popup>
           </Marker>
+          {/* A wider white halo underneath makes the accent line legible
+          against Voyager's busier, colorful basemap. */}
           <Polyline
             positions={[
               [originCoords.lat, originCoords.lng],
               [destCoords.lat, destCoords.lng],
             ]}
-            pathOptions={{ color: "#17e0a3", weight: 3, dashArray: "7 9" }}
+            pathOptions={{ color: "#ffffff", weight: 6, opacity: 0.85 }}
+          />
+          <Polyline
+            positions={[
+              [originCoords.lat, originCoords.lng],
+              [destCoords.lat, destCoords.lng],
+            ]}
+            pathOptions={{ color: "#0fa87a", weight: 3, dashArray: "7 9" }}
           />
         </MapContainer>
       </div>

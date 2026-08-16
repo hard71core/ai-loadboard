@@ -15,7 +15,7 @@ one on); the rest of the AI subsystem described in
 - **Database:** PostgreSQL
 - **AI:** Anthropic Claude (Haiku 4.5, structured outputs) — natural-language load
   search, `backend/app/core/llm.py`
-- **Maps:** Leaflet + CARTO dark tiles, OpenStreetMap Nominatim for geocoding
+- **Maps:** Leaflet + CARTO Voyager tiles, OpenStreetMap Nominatim for geocoding
   (no API key) — the load detail page's route map,
   `frontend/src/components/RouteMap.tsx`
 

@@ -885,11 +885,13 @@ tbody tr:last-child td {
   background: var(--accent-2);
 }
 
-/* Leaflet's own chrome (zoom controls, attribution, popups) ships light by
-default — restyle it to fit the dark theme instead of a jarring white box
-sitting inside a dark card. */
+/* The Voyager basemap is light/colorful by design (that's the "brighter"
+fix) — this is just its own placeholder color while tiles load, not a
+dark-theme override. Leaflet's UI chrome (zoom controls, attribution,
+popups) stays styled dark below so it reads as a deliberate branded
+overlay floating on top, not a mismatched default. */
 .leaflet-container {
-  background: var(--surface-2);
+  background: #e5e3dd;
   font-family: var(--font-body);
 }
 
