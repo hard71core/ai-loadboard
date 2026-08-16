@@ -4,7 +4,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.sql import func
 
-from .database import Base
+from .core.database import Base
 
 
 class LoadStatus(str, enum.Enum):

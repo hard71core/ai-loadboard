@@ -1,4 +1,3 @@
-import os
 import time
 from contextlib import asynccontextmanager
 
@@ -8,8 +7,9 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from . import models, schemas
-from .auth import create_access_token, get_current_user, hash_password, verify_password
-from .database import Base, engine, get_db
+from .core.config import get_cors_origins
+from .core.database import Base, engine, get_db
+from .core.security import create_access_token, get_current_user, hash_password, verify_password
 
 
 @asynccontextmanager
@@ -28,18 +28,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI Loadboard API — Demo", lifespan=lifespan)
 
-# Comma-separated list of allowed origins, e.g. "http://localhost:5173,https://app.example.com".
-# Falls back to the Vite dev server origin so `docker compose up` keeps working
-# out of the box even if CORS_ORIGINS isn't set.
-_cors_origins = [
-    origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
-    if origin.strip()
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=get_cors_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

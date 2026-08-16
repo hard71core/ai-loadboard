@@ -9,7 +9,8 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # run configs, a bare `uvicorn app.main:app`, pytest, ...). Inside Docker,
 # docker-compose already injects these as real env vars, so this is a no-op
 # there (load_dotenv never overrides an already-set variable by default).
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+# app/core/database.py -> parents[3] is the repo root.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://loadboard:loadboard@localhost:5432/loadboard"

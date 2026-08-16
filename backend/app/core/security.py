@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from . import models
+from .. import models
 from .database import get_db  # also loads the project-root .env as a side effect
 
 # In a real deployment this must come from a secret manager / env var set at
