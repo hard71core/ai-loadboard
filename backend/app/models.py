@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, DateTime, Integer, Numeric, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.sql import func
 
@@ -42,7 +42,15 @@ class Load(Base):
     equipment_type = Column(String, nullable=False, default="Dry Van")
     weight_lbs = Column(Integer, nullable=False, default=0)
     price_usd = Column(Numeric(10, 2), nullable=False)
+
+    # FK is the source of truth for ownership/authorization checks.
+    # *_name stays as a denormalized display cache set from the owning
+    # user's company_name at the time of the action — nullable because the
+    # demo seed loads (main.py) aren't posted by a real registered user.
+    shipper_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    carrier_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     shipper_name = Column(String, nullable=False)
     carrier_name = Column(String, nullable=True)
+
     status = Column(SAEnum(LoadStatus), nullable=False, default=LoadStatus.open)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
