@@ -54,3 +54,20 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class SearchQuery(BaseModel):
+    query: str = Field(min_length=1, max_length=500)
+
+
+class SearchFilter(BaseModel):
+    """Structured filter extracted from a free-text NL search query by
+    core/llm.py. Every field is optional — set only when the query actually
+    specified it; the caller applies whichever fields came back non-null."""
+
+    origin: str | None = None
+    destination: str | None = None
+    equipment_type: str | None = None
+    price_max: float | None = None
+    weight_min: int | None = None
+    weight_max: int | None = None
