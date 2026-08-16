@@ -34,7 +34,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export default function App() {
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, token, loading: authLoading, logout } = useAuth();
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,16 +70,15 @@ export default function App() {
 
   async function handleCreate(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !token) return;
     setSubmitting(true);
     try {
       const payload: LoadCreatePayload = {
         ...form,
         weight_lbs: Number(form.weight_lbs),
         price_usd: Number(form.price_usd),
-        shipper_name: user.company_name,
       };
-      await createLoad(payload);
+      await createLoad(payload, token);
       setForm(EMPTY_FORM);
       setShowForm(false);
       await loadData();
@@ -91,9 +90,9 @@ export default function App() {
   }
 
   async function handleAccept(id: number) {
-    if (!user) return;
+    if (!user || !token) return;
     try {
-      await acceptLoad(id, user.company_name);
+      await acceptLoad(id, token);
       await loadData();
     } catch (e) {
       setError((e as Error).message);

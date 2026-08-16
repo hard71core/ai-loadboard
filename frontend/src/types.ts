@@ -21,7 +21,6 @@ export interface LoadCreatePayload {
   equipment_type: string;
   weight_lbs: number;
   price_usd: number;
-  shipper_name: string;
 }
 
 export type UserRole = "shipper" | "carrier";

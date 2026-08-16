@@ -28,20 +28,25 @@ export async function fetchLoads(): Promise<Load[]> {
   return handle<Load[]>(res, "Не вдалося завантажити список вантажів");
 }
 
-export async function createLoad(payload: LoadCreatePayload): Promise<Load> {
+export async function createLoad(
+  payload: LoadCreatePayload,
+  token: string,
+): Promise<Load> {
   const res = await fetch(`${API_URL}/api/loads`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(payload),
   });
   return handle<Load>(res, "Не вдалося опублікувати вантаж");
 }
 
-export async function acceptLoad(id: number, carrierName: string): Promise<Load> {
+export async function acceptLoad(id: number, token: string): Promise<Load> {
   const res = await fetch(`${API_URL}/api/loads/${id}/accept`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ carrier_name: carrierName }),
+    headers: { Authorization: `Bearer ${token}` },
   });
   return handle<Load>(res, "Не вдалося взяти вантаж");
 }

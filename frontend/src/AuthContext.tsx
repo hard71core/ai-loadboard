@@ -10,6 +10,7 @@ import type { User } from "./types";
 
 interface AuthContextValue {
   user: User | null;
+  token: string | null;
   loading: boolean;
   setAuth: (token: string, user: User) => void;
   logout: () => void;
@@ -20,6 +21,7 @@ const STORAGE_KEY = "ai_loadboard_token";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,23 +31,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     fetchMe(stored)
-      .then(setUser)
+      .then((fetchedUser) => {
+        setUser(fetchedUser);
+        setToken(stored);
+      })
       .catch(() => localStorage.removeItem(STORAGE_KEY))
       .finally(() => setLoading(false));
   }, []);
 
-  function setAuth(token: string, newUser: User) {
-    localStorage.setItem(STORAGE_KEY, token);
+  function setAuth(newToken: string, newUser: User) {
+    localStorage.setItem(STORAGE_KEY, newToken);
+    setToken(newToken);
     setUser(newUser);
   }
 
   function logout() {
     localStorage.removeItem(STORAGE_KEY);
+    setToken(null);
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, setAuth, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );
