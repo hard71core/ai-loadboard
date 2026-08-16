@@ -1,15 +1,14 @@
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
 
-from . import models, schemas
+from . import models
+from .api.routes import auth, loads
 from .core.config import get_cors_origins
 from .core.database import Base, engine, get_db
-from .core.security import create_access_token, get_current_user, hash_password, verify_password
 
 
 @asynccontextmanager
@@ -35,6 +34,9 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+app.include_router(auth.router)
+app.include_router(loads.router)
 
 # Demo seed data: a handful of loads posted directly by shippers, waiting to be
 # matched with a carrier — no broker in between.
@@ -94,100 +96,3 @@ def init_db_with_retry(retries: int = 15, delay: float = 2.0) -> None:
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
-
-
-@app.post("/api/auth/register", response_model=schemas.Token, status_code=201)
-def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(models.User).filter(models.User.email == payload.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Користувач з таким email вже існує")
-    user = models.User(
-        email=payload.email,
-        hashed_password=hash_password(payload.password),
-        company_name=payload.company_name,
-        role=payload.role,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return schemas.Token(access_token=create_access_token(user.email), user=user)
-
-
-@app.post("/api/auth/login", response_model=schemas.Token)
-def login(payload: schemas.LoginPayload, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Невірний email або пароль")
-    return schemas.Token(access_token=create_access_token(user.email), user=user)
-
-
-@app.get("/api/auth/me", response_model=schemas.UserOut)
-def me(current_user: models.User = Depends(get_current_user)):
-    return current_user
-
-
-@app.get("/api/loads", response_model=list[schemas.LoadOut])
-def list_loads(status: str | None = None, db: Session = Depends(get_db)):
-    query = db.query(models.Load)
-    if status:
-        query = query.filter(models.Load.status == status)
-    return query.order_by(models.Load.created_at.desc()).all()
-
-
-@app.post("/api/loads", response_model=schemas.LoadOut)
-def create_load(
-    payload: schemas.LoadCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
-    if current_user.role != models.UserRole.shipper:
-        raise HTTPException(
-            status_code=403, detail="Тільки вантажовідправники можуть публікувати вантажі"
-        )
-    load = models.Load(
-        **payload.model_dump(),
-        shipper_id=current_user.id,
-        shipper_name=current_user.company_name,
-    )
-    db.add(load)
-    db.commit()
-    db.refresh(load)
-    return load
-
-
-@app.post("/api/loads/{load_id}/accept", response_model=schemas.LoadOut)
-def accept_load(
-    load_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
-    if current_user.role != models.UserRole.carrier:
-        raise HTTPException(status_code=403, detail="Тільки перевізники можуть брати вантажі")
-    load = db.query(models.Load).filter(models.Load.id == load_id).first()
-    if not load:
-        raise HTTPException(status_code=404, detail="Load not found")
-    if load.status != models.LoadStatus.open:
-        raise HTTPException(status_code=400, detail="Load already taken")
-    load.carrier_id = current_user.id
-    load.carrier_name = current_user.company_name
-    load.status = models.LoadStatus.accepted
-    db.commit()
-    db.refresh(load)
-    return load
-
-
-@app.post("/api/loads/{load_id}/complete", response_model=schemas.LoadOut)
-def complete_load(
-    load_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
-    load = db.query(models.Load).filter(models.Load.id == load_id).first()
-    if not load:
-        raise HTTPException(status_code=404, detail="Load not found")
-    if current_user.id not in (load.shipper_id, load.carrier_id):
-        raise HTTPException(status_code=403, detail="Немає прав завершити цей вантаж")
-    load.status = models.LoadStatus.completed
-    db.commit()
-    db.refresh(load)
-    return load
