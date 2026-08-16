@@ -106,7 +106,8 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
 
 - Sign up and log in (email + password, JWT), with a role picked at
   registration: **shipper** or **carrier**
-- List of open loads (route, equipment type, weight, rate, shipper)
+- List of open loads (route, equipment type, weight, rate, shipper) — click
+  any row to open its detail page (`/loads/:id`)
 - Natural-language load search (e.g. "reefer out of Dallas under 900") — when
   `NL_SEARCH_ENABLED=true`, Claude Haiku 4.5 turns the query into a
   structured filter; off by default (or if the key is missing or the LLM

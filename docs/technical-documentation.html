@@ -367,12 +367,12 @@
       <table>
         <thead><tr><th>Компонент</th><th>Поточний стан (MVP)</th><th>Цільовий стан</th></tr></thead>
         <tbody>
-          <tr><td>Клієнт</td><td>React SPA, один екран, ручний <code>fetch</code></td><td>React SPA + мобільний застосунок (React Native), кешування запитів, realtime через WebSocket</td></tr>
+          <tr><td>Клієнт</td><td>React SPA з клієнтським роутингом (<code>react-router</code>): список вантажів + сторінка деталей вантажу, ручний <code>fetch</code></td><td>React SPA + мобільний застосунок (React Native), кешування запитів, realtime через WebSocket</td></tr>
           <tr><td>Бекенд</td><td>Один монолітний FastAPI-сервіс</td><td>Core-сервіс + вісім AI-сервісів, розв'язаних через шину подій</td></tr>
           <tr><td>База даних</td><td>Один PostgreSQL, 2 таблиці (<code>users</code>, <code>loads</code>)</td><td>PostgreSQL (OLTP) + pgvector/векторна БД + Redis (кеш/черги) + обʼєктне сховище документів</td></tr>
           <tr><td>Автентифікація</td><td>Email + пароль, JWT без refresh</td><td>JWT + refresh-токени, MFA, SSO для enterprise-акаунтів</td></tr>
-          <tr><td>Матчинг вантажів</td><td>Лінійний список, сортування за датою</td><td>ML-ранжування під профіль перевізника</td></tr>
-          <tr><td>AI-функції</td><td>Відсутні</td><td>7 AI-сервісів (розділ 7)</td></tr>
+          <tr><td>Матчинг вантажів</td><td>MVP: детерміністична евристика під історію перевізника (розділ 7.3)</td><td>ML-ранжування під профіль перевізника</td></tr>
+          <tr><td>AI-функції</td><td>2 з 7 — NL Search і Smart Matching, обидва MVP без ML/embeddings (розділи 7.3/7.6)</td><td>7 AI-сервісів (розділ 7)</td></tr>
           <tr><td>Інфраструктура</td><td>Docker Compose, один хост</td><td>Kubernetes, кілька середовищ, автоскейлінг</td></tr>
           <tr><td>Спостережуваність</td><td>Немає — лише логи <code>uvicorn</code> у stdout</td><td>Метрики, трейсинг, структуровані логи, алертинг, AI-eval пайплайни</td></tr>
         </tbody>
@@ -472,6 +472,7 @@
           <tr><td>React 18 + TypeScript</td><td>SPA, компонентний UI</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Vite</td><td>Dev-сервер і білд</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Ручний <code>fetch</code> + React Context</td><td>Доступ до API та стан автентифікації (<code>AuthContext.tsx</code>)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>react-router-dom</td><td>Клієнтський роутинг — список вантажів (<code>/</code>) і сторінка деталей (<code>/loads/:id</code>)</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>TanStack Query</td><td>Кешування запитів, повторні спроби, інвалідація</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
           <tr><td>WebSocket-клієнт</td><td>Realtime-оновлення статусів вантажу, офери AI-агента</td><td><span class="pill pill--wip">Фаза 2</span></td></tr>
           <tr><td>React Native</td><td>Мобільний застосунок для перевізників (сповіщення, GPS)</td><td><span class="pill pill--planned">Фаза 3</span></td></tr>
@@ -775,6 +776,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Вхід, видає JWT на 7 днів</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Поточний користувач за токеном</td><td>Bearer</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>Список вантажів, опційний фільтр <code>?status=</code></td><td>—</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}</code></td><td>Деталі одного вантажу — сторінка деталей на фронтенді</td><td>—</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Публікація вантажу — тільки роль <code>shipper</code>, <code>shipper_id</code> береться з токена</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Взяти вантаж напряму — тільки роль <code>carrier</code>, <code>carrier_id</code> береться з токена</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Позначити завершеним — лише shipper вантажу або carrier, що його взяв</td><td>Bearer</td></tr>
@@ -916,7 +918,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів, <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>) і <code>GET /api/loads/matches</code> (ранжування, роль, холодний старт). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
+    <p>Сьогодні: <code>backend/tests</code> покриває health-check, auth/роль/власність на трьох мутуючих ендпоінтах вантажів, <code>POST /api/search</code> (виклик Anthropic мокається на місці імпорту — тести детерміністичні, без мережі й без <code>ANTHROPIC_API_KEY</code>), <code>GET /api/loads/matches</code> (ранжування, роль, холодний старт) і <code>GET /api/loads/{id}</code> (деталі, 404, регресійний тест на те, що <code>{load_id:int}</code> не "проковтує" <code>/matches</code>). Фронтенд — жодного файлу <code>*.test.*</code>. Наступний приорітет: перехід статусів вантажу (<code>open→accepted→completed</code>), оскільки саме там зараз відомий розрив (розділ 17).</p>
 
     <!-- 16 -->
     <h2 id="s16"><span class="num">16</span>Технічна дорожня карта</h2>
@@ -944,7 +946,7 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT без refresh і без відкликання, дефолтний секрет у коді</td><td>Вкрадений токен дійсний до 7 днів; ризик при випадковому деплої з дефолтним <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Прийнятно для демо, неприйнятно для продакшну з реальними даними</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>Схема БД створюється через <code>Base.metadata.create_all</code>, без міграцій</td><td>Немає керованого шляху еволюції схеми в продакшн-даних</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code>, <code>/api/search</code> і <code>/api/loads/matches</code> (17 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Тести бекенду — health-check, auth/ownership на <code>loads</code>, <code>/api/search</code>, <code>/api/loads/matches</code> і <code>GET /api/loads/{id}</code> (20 тестів); фронтенд — жодного</td><td>Більшість бізнес-логіки досі без регресійного захисту</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>Немає rate limiting на <code>/api/auth/*</code></td><td>Вразливість до brute-force підбору пароля</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>8</td><td>5 із 7 AI-сервісів — поки що специфікація, не код (реалізовано NL Search і Matching MVP, розділи 7.3/7.6 — обидва детерміністичні, без ML/embeddings)</td><td>Основна цінність продукту для інвестора здебільшого ще не побудована</td><td><span class="pill pill--risk">Відкрито</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> без rate limiting і без per-request/per-period cost cap на виклики Anthropic (розділ 7.8 — «circuit breaker» ще не реалізовано)</td><td>Будь-хто без автентифікації може ініціювати необмежену кількість платних LLM-викликів</td><td><span class="pill pill--risk">P2</span></td></tr>
@@ -1031,12 +1033,12 @@ CREATE TABLE documents (
       <table>
         <thead><tr><th>Component</th><th>Current state (MVP)</th><th>Target state</th></tr></thead>
         <tbody>
-          <tr><td>Client</td><td>React SPA, single screen, manual <code>fetch</code></td><td>React SPA + mobile app (React Native), query caching, realtime via WebSocket</td></tr>
+          <tr><td>Client</td><td>React SPA with client-side routing (<code>react-router</code>): load list + a load detail page, manual <code>fetch</code></td><td>React SPA + mobile app (React Native), query caching, realtime via WebSocket</td></tr>
           <tr><td>Backend</td><td>One monolithic FastAPI service</td><td>Core service + eight AI services, decoupled via an event bus</td></tr>
           <tr><td>Database</td><td>One PostgreSQL, 2 tables (<code>users</code>, <code>loads</code>)</td><td>PostgreSQL (OLTP) + pgvector/vector store + Redis (cache/queues) + object storage for documents</td></tr>
           <tr><td>Authentication</td><td>Email + password, JWT with no refresh</td><td>JWT + refresh tokens, MFA, SSO for enterprise accounts</td></tr>
-          <tr><td>Load matching</td><td>Linear list, sorted by date</td><td>ML ranking tuned to carrier profile</td></tr>
-          <tr><td>AI features</td><td>None</td><td>7 AI services (section 7)</td></tr>
+          <tr><td>Load matching</td><td>MVP: deterministic heuristic against the carrier's history (section 7.3)</td><td>ML ranking tuned to carrier profile</td></tr>
+          <tr><td>AI features</td><td>2 of 7 — NL Search and Smart Matching, both MVP with no ML/embeddings (sections 7.3/7.6)</td><td>7 AI services (section 7)</td></tr>
           <tr><td>Infrastructure</td><td>Docker Compose, single host</td><td>Kubernetes, multiple environments, autoscaling</td></tr>
           <tr><td>Observability</td><td>None — just <code>uvicorn</code> logs to stdout</td><td>Metrics, tracing, structured logs, alerting, AI-eval pipelines</td></tr>
         </tbody>
@@ -1135,6 +1137,7 @@ CREATE TABLE documents (
           <tr><td>React 18 + TypeScript</td><td>SPA, component UI</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Vite</td><td>Dev server and build</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>Manual <code>fetch</code> + React Context</td><td>API access and auth state (<code>AuthContext.tsx</code>)</td><td><span class="pill pill--done">MVP</span></td></tr>
+          <tr><td>react-router-dom</td><td>Client-side routing — load list (<code>/</code>) and a detail page (<code>/loads/:id</code>)</td><td><span class="pill pill--done">MVP</span></td></tr>
           <tr><td>TanStack Query</td><td>Request caching, retries, invalidation</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
           <tr><td>WebSocket client</td><td>Realtime load-status updates, AI agent offers</td><td><span class="pill pill--wip">Phase 2</span></td></tr>
           <tr><td>React Native</td><td>Mobile app for carriers (notifications, GPS)</td><td><span class="pill pill--planned">Phase 3</span></td></tr>
@@ -1438,6 +1441,7 @@ CREATE TABLE documents (
           <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Log in, issues a JWT valid 7 days</td><td>—</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Current user from the token</td><td>Bearer</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/loads</code></td><td>List loads, optional <code>?status=</code> filter</td><td>—</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/loads/{id}</code></td><td>Single-load detail — backs the frontend's detail page</td><td>—</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads</code></td><td>Post a load — shipper role only, <code>shipper_id</code> comes from the token</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/accept</code></td><td>Take a load directly — carrier role only, <code>carrier_id</code> comes from the token</td><td>Bearer</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/loads/{id}/complete</code></td><td>Mark completed — only the load's shipper or the carrier who took it</td><td>Bearer</td></tr>
@@ -1579,7 +1583,7 @@ CREATE TABLE documents (
         </tbody>
       </table>
     </div>
-    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed), and <code>GET /api/loads/matches</code> (ranking, role gating, cold start). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
+    <p>Today: <code>backend/tests</code> covers the health check, auth/role/ownership on the three mutating load endpoints, <code>POST /api/search</code> (the Anthropic call is mocked at the import site — tests are deterministic, no network and no <code>ANTHROPIC_API_KEY</code> needed), <code>GET /api/loads/matches</code> (ranking, role gating, cold start), and <code>GET /api/loads/{id}</code> (detail, 404, a regression test that <code>{load_id:int}</code> doesn't swallow <code>/matches</code>). Frontend has no <code>*.test.*</code> files at all. Next priority: the load status transition (<code>open→accepted→completed</code>), since that's exactly where the known gap is right now (section 17).</p>
 
     <!-- 16 -->
     <h2 id="s16-en"><span class="num">16</span>Technical roadmap</h2>
@@ -1607,7 +1611,7 @@ CREATE TABLE documents (
           <tr><td>3</td><td>JWT has no refresh and no revocation, default secret in code</td><td>A stolen token stays valid for up to 7 days; risk if a build ever ships with the default <code>JWT_SECRET</code></td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>4</td><td>CORS <code>allow_origins=["*"]</code></td><td>Fine for a demo, not for production with real data</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>5</td><td>The DB schema is created via <code>Base.metadata.create_all</code>, no migrations</td><td>No managed path for evolving the schema against production data</td><td><span class="pill pill--risk">P1</span></td></tr>
-          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, <code>/api/search</code>, and <code>/api/loads/matches</code> (17 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
+          <tr><td>6</td><td>Backend tests cover the health check, loads auth/ownership, <code>/api/search</code>, <code>/api/loads/matches</code>, and <code>GET /api/loads/{id}</code> (20 tests); frontend has none</td><td>Most business logic still has no regression safety net</td><td><span class="pill pill--risk">P1</span></td></tr>
           <tr><td>7</td><td>No rate limiting on <code>/api/auth/*</code></td><td>Vulnerable to password brute-forcing</td><td><span class="pill pill--risk">P2</span></td></tr>
           <tr><td>8</td><td>5 of 7 AI services are still a spec, not code (NL Search and Matching MVP are built, sections 7.3/7.6 — both deterministic, no ML/embeddings)</td><td>Most of the core value proposition for investors hasn't been built yet</td><td><span class="pill pill--risk">Open</span></td></tr>
           <tr><td>9</td><td><code>POST /api/search</code> has no rate limiting and no per-request/per-period cost cap on Anthropic calls (section 7.8's "circuit breaker" isn't built yet)</td><td>Anyone, unauthenticated, can trigger unlimited billed LLM calls</td><td><span class="pill pill--risk">P2</span></td></tr>

@@ -28,6 +28,11 @@ export async function fetchLoads(): Promise<Load[]> {
   return handle<Load[]>(res, "Failed to load the load list");
 }
 
+export async function fetchLoad(id: number): Promise<Load> {
+  const res = await fetch(`${API_URL}/api/loads/${id}`);
+  return handle<Load>(res, "Failed to load the load details");
+}
+
 export async function searchLoads(query: string): Promise<Load[]> {
   const res = await fetch(`${API_URL}/api/search`, {
     method: "POST",

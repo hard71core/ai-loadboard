@@ -15,6 +15,21 @@ def list_loads(status: str | None = None, db: Session = Depends(get_db)):
     return query.order_by(models.Load.created_at.desc()).all()
 
 
+@router.get("/{load_id:int}", response_model=schemas.LoadOut)
+def get_load(load_id: int, db: Session = Depends(get_db)):
+    """Single-load detail page. The `:int` path converter is deliberate,
+    not just typing hygiene — a plain `{load_id}` matches *any* string at
+    Starlette's routing layer (including "matches"), which would 422 on
+    GET /api/loads/matches instead of falling through to
+    api/routes/matching.py's route for it. `:int` makes the routing regex
+    itself digits-only, so "matches" never matches this pattern and
+    Starlette tries the next registered route instead."""
+    load = db.query(models.Load).filter(models.Load.id == load_id).first()
+    if not load:
+        raise HTTPException(status_code=404, detail="Load not found")
+    return load
+
+
 @router.post("", response_model=schemas.LoadOut)
 def create_load(
     payload: schemas.LoadCreate,

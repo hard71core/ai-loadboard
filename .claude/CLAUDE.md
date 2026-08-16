@@ -6,8 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A demo-stage, two-sided freight marketplace: a shipper posts a load, a carrier
 takes it directly — no broker. The backend is a plain FastAPI CRUD service
-(`backend/app/`) over two tables, the frontend is a single-screen React SPA
-(`frontend/`). **Two of the 7 planned AI features have a working MVP**:
+(`backend/app/`) over two tables, the frontend is a React SPA (`frontend/`)
+with client-side routing (`react-router-dom`) — a load list at `/` and a
+load detail page at `/loads/:id`, not a single screen anymore.
+**Two of the 7 planned AI features have a working MVP**:
 natural-language load search (`POST /api/search`, `core/llm.py`, Claude
 Haiku 4.5, structured outputs, gated off by default behind
 `NL_SEARCH_ENABLED` — see `.claude/rules/security.md`) and smart load
@@ -112,7 +114,10 @@ api/
   deps.py             re-exports get_db/get_current_user for routes
   routes/
     auth.py            register/login/me
-    loads.py           list/create/accept/complete
+    loads.py           list/detail/create/accept/complete — the detail
+                        route is GET /{load_id:int}; the :int converter is
+                        load-bearing, not just typing hygiene, see its
+                        docstring for why (route order vs. matching.py)
     matching.py          smart matching — deterministic ranking heuristic
                           (equipment + lane-state overlap with a carrier's
                           own history), no LLM, no ML model yet
@@ -127,6 +132,23 @@ schemas.py          Pydantic schemas — flat, same reasoning
 still only a handful of small classes, not enough to justify a package per
 domain yet. Revisit when one of them actually gets that big, not
 preemptively.
+
+**Frontend layout** (`frontend/src/`):
+```
+main.tsx            BrowserRouter + AuthProvider + App
+App.tsx             shell only — header/auth status, mounts <Routes>
+constants.ts         STATUS_LABEL/ROLE_LABEL shared between pages
+pages/
+  LoadsPage.tsx       "/" — list, search, matches, the post-a-load form
+  LoadDetailPage.tsx  "/loads/:id" — full detail for one load, accept action
+components/
+  AuthPanel.tsx       login/register form, used from App's shell
+AuthContext.tsx     auth state (token/user), localStorage-backed
+api.ts               every backend call in one place
+```
+`openAuth` (opens the login/register panel) lives in `App.tsx` and is passed
+down as a prop to both pages rather than promoted to context — there are
+only two call sites, a context would be premature.
 
 **One `.env` at the repo root is the single source of config**, read three
 different ways:
