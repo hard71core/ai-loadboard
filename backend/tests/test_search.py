@@ -2,9 +2,9 @@
 site inside app.api.routes.search, not in app.core.llm), so these run in CI
 with no ANTHROPIC_API_KEY and no network call. What core/llm.py itself does
 with a real key is not this file's concern; this file's concern is that the
-route applies a SearchFilter correctly, and degrades correctly when there
-isn't one — see core/llm.py's docstring for why "no filter" is the only
-contract this route depends on.
+route applies a SearchFilter correctly, and degrades to the keyword fallback
+(_keyword_filter) correctly when there isn't one — see core/llm.py's
+docstring for why "None" is the only contract this route depends on.
 
 Same DB requirement as test_health.py.
 """
@@ -34,19 +34,35 @@ def _post_load(client: TestClient, token: str, **overrides) -> dict:
     return res.json()
 
 
-def test_search_falls_back_to_unfiltered_list_when_llm_unavailable():
+def test_search_falls_back_to_keyword_match_when_llm_unavailable():
     with patch("app.api.routes.search.parse_search_query", return_value=None):
         with TestClient(app) as client:
             token, _ = register_user(client, "shipper")
-            _post_load(client, token, title="Fallback probe A")
-            _post_load(client, token, title="Fallback probe B", equipment_type="Dry Van")
+            reefer = _post_load(client, token, title="Keyword fallback reefer probe")
+            dry_van = _post_load(
+                client, token, title="Keyword fallback dry van probe", equipment_type="Dry Van"
+            )
 
-            search_res = client.post("/api/search", json={"query": "anything, doesn't matter"})
-            list_res = client.get("/api/loads")
+            res = client.post("/api/search", json={"query": "reefer"})
 
-    assert search_res.status_code == 200, search_res.text
-    # None filter -> zero filters applied -> identical to the plain list.
-    assert [load["id"] for load in search_res.json()] == [load["id"] for load in list_res.json()]
+    assert res.status_code == 200, res.text
+    ids = {load["id"] for load in res.json()}
+    # "reefer" only appears in one load's title/equipment_type — the fallback
+    # must actually filter, not silently return the whole unfiltered list.
+    assert reefer["id"] in ids
+    assert dry_van["id"] not in ids
+
+
+def test_search_keyword_fallback_returns_empty_when_nothing_matches():
+    with patch("app.api.routes.search.parse_search_query", return_value=None):
+        with TestClient(app) as client:
+            token, _ = register_user(client, "shipper")
+            _post_load(client, token, title="Keyword fallback no-match probe")
+
+            res = client.post("/api/search", json={"query": "zzz-no-such-keyword-zzz"})
+
+    assert res.status_code == 200, res.text
+    assert res.json() == []
 
 
 def test_search_applies_llm_filter():

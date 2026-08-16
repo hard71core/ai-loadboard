@@ -29,9 +29,9 @@ real DB, it'll pass in CI too, and vice versa.
 Right now there are three test files: `backend/tests/test_health.py` (a
 smoke test), `backend/tests/test_load_ownership.py` (auth/role/ownership
 on the three mutating load endpoints), and `backend/tests/test_search.py`
-(NL search — fallback-to-unfiltered-list, filter application, empty-query
-rejection) — still nowhere near coverage, just the slices that existed
-reasons to test first. `backend/tests/conftest.py` holds the shared
+(NL search — LLM filter application, keyword fallback when the LLM path is
+unavailable, empty-query rejection) — still nowhere near coverage, just the
+slices that existed reasons to test first. `backend/tests/conftest.py` holds the shared
 `register_user(client, role)` helper (extracted out of
 `test_load_ownership.py` once `test_search.py` needed the same setup) — use
 it instead of writing a new inline registration helper. When you add backend

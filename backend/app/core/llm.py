@@ -33,8 +33,8 @@ _SYSTEM_PROMPT = (
 def parse_search_query(query: str) -> SearchFilter | None:
     """Turns free text like "reefer out of Dallas this week under 900" into
     a SearchFilter. Returns None if the key isn't configured, the API call
-    fails, or the response doesn't validate — callers must fall back to an
-    unfiltered list in every one of those cases, not raise."""
+    fails, or the response doesn't validate — callers must fall back to a
+    plain keyword match in every one of those cases, not raise."""
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key or api_key.startswith("replace-with-"):
         return None
@@ -49,7 +49,7 @@ def parse_search_query(query: str) -> SearchFilter | None:
             output_format=SearchFilter,
         )
     except Exception:
-        logger.exception("NL search: Anthropic call failed, falling back to unfiltered list")
+        logger.exception("NL search: Anthropic call failed, falling back to keyword search")
         return None
 
     return response.parsed_output

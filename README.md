@@ -28,9 +28,10 @@ new `JWT_SECRET` (`openssl rand -hex 32`) and never reuse secrets across
 environments.
 
 `ANTHROPIC_API_KEY` is optional. Without it (or with the placeholder from
-`.env.example`), natural-language load search (`POST /api/search`) simply
-returns the unfiltered list instead of applying an AI filter — the app never
-crashes or blocks on a missing key.
+`.env.example`, or if the Anthropic account is out of credit), natural-language
+load search (`POST /api/search`) falls back to a plain keyword match instead
+of an AI filter — the app never crashes or blocks on a missing key, and the
+fallback still actually searches rather than returning everything.
 
 ## Running via Docker
 
@@ -102,8 +103,9 @@ service) and frontend lint+build on every push/PR via GitHub Actions.
   registration: **shipper** or **carrier**
 - List of open loads (route, equipment type, weight, rate, shipper)
 - Natural-language load search (e.g. "reefer out of Dallas under 900") —
-  Claude Haiku 4.5 turns the query into a structured filter; falls back to the
-  plain unfiltered list if the key is missing or the LLM call fails
+  Claude Haiku 4.5 turns the query into a structured filter; falls back to a
+  plain keyword match across title/origin/destination/equipment if the key is
+  missing or the LLM call fails
 - Posting a new load — available only to authenticated shippers
 - "Accept load" — available only to authenticated carriers; they take the load
   directly, with no broker in between

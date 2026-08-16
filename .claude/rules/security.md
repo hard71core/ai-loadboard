@@ -13,8 +13,9 @@ code.
 - `ANTHROPIC_API_KEY` (`.env`) is a billed third-party credential, not just
   another config value — same "never commit, never log it" rule as
   `JWT_SECRET`. `core/llm.py` treats it as optional at runtime (unset or
-  the `.env.example` placeholder both fall through to "no filter"), so a
-  missing key is never a reason to hardcode a real one anywhere as a
+  the `.env.example` placeholder both fall through to `None`, and
+  `api/routes/search.py` degrades to a plain keyword match in that case),
+  so a missing key is never a reason to hardcode a real one anywhere as a
   fallback.
 - Every mutating endpoint must check authentication **and** ownership before
   this project can be considered production-safe (see "Known gaps" below —
