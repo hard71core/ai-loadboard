@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 8 files, 65 tests today.
+be tested first: 9 files, 72 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -198,9 +198,23 @@ dependencies this file has no reason to also exercise; `HomePage`'s mock
 exposes its `openAuth` prop via a button so the "a page opens the modal
 itself" path is covered too, not just the header's own buttons.
 
-Everything else — `HomePage`, `LoadDetailPage`, `DocsPage`, and
-`RouteMap.tsx` (Leaflet — would need jsdom canvas/geometry shims) — has no
-tests yet. That's the next gap, not a secret one.
+`frontend/src/pages/HomePage.test.tsx` covers the page's own logic: it
+fetches loads on mount and derives its two hero stats from the result —
+total load count and, separately, only loads with `status === "open"` —
+falling back to zero on either stat (not a crash) when the fetch rejects;
+both "Sign up free" CTAs (hero and the bottom CTA band) call `openAuth`
+`("register")` and disappear once a user is logged in; both "Browse
+loads" links point to `/loads` regardless of auth state. `../api` is
+mocked at the module level for `fetchLoads`, `../AuthContext` for
+`useAuth`, and `../hooks/useCountUp` is mocked to the identity function —
+it's a purely cosmetic `requestAnimationFrame`-driven animation (see its
+own docstring) with no dependents besides this page, so a test asserting
+on real target numbers is more useful than one that drives animation
+frames.
+
+Everything else — `LoadDetailPage`, `DocsPage`, and `RouteMap.tsx`
+(Leaflet — would need jsdom canvas/geometry shims) — has no tests yet.
+That's the next gap, not a secret one.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails
