@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 6 files, 28 tests today.
+be tested first: 7 files, 48 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -170,11 +170,23 @@ state resets any previously-chosen city (a Dallas left over from Texas
 would be wrong once the state's Florida), typed-but-never-selected text is
 rejected at submit rather than silently posted as-is, a full submit posts
 the combined `"City, ST"` strings to `createLoad`, and the form/button
-don't render at all for a non-shipper.
+don't render at all for a non-shipper. `frontend/src/api.test.ts` covers
+every exported call in `api.ts` — the shared `handle()` error path (a
+success response's JSON passed through as-is, a non-OK response's server
+`detail` message surfaced, and the two fallback-to-generic-message cases:
+no JSON body at all, and a JSON body with no `detail` field), the exact
+URL/method/headers/body each function sends (including which calls carry
+a `Bearer` token and which don't), and `logoutUser`'s deliberately
+different contract — it swallows a non-OK HTTP status (best-effort
+revocation, see its docstring) but still rejects on an actual network
+failure. `global.fetch` is stubbed with `vi.stubGlobal` per test, no
+`AuthContext`/component involved — this is the one file in the frontend
+suite testing a plain module with no React in the loop besides
+`geocode.test.ts`.
 
 Everything else — `HomePage`, `LoadDetailPage`, `DocsPage`, `RouteMap.tsx`
-(Leaflet — would need jsdom canvas/geometry shims), `App.tsx`'s shell/nav,
-`api.ts` itself — has no tests yet. That's the next gap, not a secret one.
+(Leaflet — would need jsdom canvas/geometry shims), `App.tsx`'s shell/nav —
+has no tests yet. That's the next gap, not a secret one.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails
