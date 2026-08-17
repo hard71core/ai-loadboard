@@ -71,7 +71,7 @@ apply everywhere no matter what file you're touching.
 
 ## Git workflow
 
-Remote `origin` is https://github.com/hard71core/ai-loadboard (public).
+Remote `origin` is https://github.com/hard71core/loadboardgram (public).
 `main` is the default branch.
 
 - **Never commit straight to `main`.** For any change, branch off first:

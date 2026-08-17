@@ -1,4 +1,4 @@
-# AI Loadboard — demo
+# LoadBoardGram — demo
 
 A freight marketplace demo connecting shippers and carriers directly (no broker).
 A basic transactional scaffold plus three working MVP features from the planned AI

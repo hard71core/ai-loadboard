@@ -18,8 +18,8 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-const ACCESS_TOKEN_KEY = "ai_loadboard_token";
-const REFRESH_TOKEN_KEY = "ai_loadboard_refresh_token";
+const ACCESS_TOKEN_KEY = "loadboardgram_token";
+const REFRESH_TOKEN_KEY = "loadboardgram_refresh_token";
 
 // Refresh a bit before the access token actually expires, not exactly at
 // the deadline — a request that starts just as the token dies would

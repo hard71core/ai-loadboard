@@ -149,7 +149,7 @@ export default function HomePage({ openAuth }: Props) {
       <div className="container">
         <section className="section">
           <div className="section-head">
-            <span className="section-kicker">Why AI Loadboard</span>
+            <span className="section-kicker">Why LoadBoardGram</span>
             <h2>Built to cut the dispatcher's busywork, not add to it</h2>
           </div>
           <div className="value-grid">

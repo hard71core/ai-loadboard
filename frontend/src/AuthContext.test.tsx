@@ -11,8 +11,8 @@ vi.mock("./api", () => ({
 
 import { logoutUser, refreshAccessToken } from "./api";
 
-const ACCESS_TOKEN_KEY = "ai_loadboard_token";
-const REFRESH_TOKEN_KEY = "ai_loadboard_refresh_token";
+const ACCESS_TOKEN_KEY = "loadboardgram_token";
+const REFRESH_TOKEN_KEY = "loadboardgram_refresh_token";
 
 const FAKE_USER: User = {
   id: 1,

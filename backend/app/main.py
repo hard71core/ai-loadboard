@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="AI Loadboard API — Demo", lifespan=lifespan)
+app = FastAPI(title="LoadBoardGram API — Demo", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Loadboard — Технічна документація</title>
+<title>LoadBoardGram — Технічна документація</title>
 <style>
   :root {
     --paper: #f4f5f7;
@@ -300,7 +300,7 @@
 <div class="shell" data-lang="uk">
 
   <aside class="toc">
-    <div class="brand"><b>AI Loadboard</b>Технічна документація · v0.1</div>
+    <div class="brand"><b>LoadBoardGram</b>Технічна документація · v0.1</div>
     <nav>
       <ol>
         <li><a href="#s1">Про документ</a></li>
@@ -335,7 +335,7 @@
 
     <div class="cover">
       <div class="kicker">Інженерна специфікація · внутрішній документ</div>
-      <h1>AI Loadboard — технічна документація</h1>
+      <h1>LoadBoardGram — технічна документація</h1>
       <p class="subtitle">Архітектура системи, доменна модель, AI-підсистема та інженерні рішення — від того, що вже працює, до того, що спроєктовано на масштаб.</p>
       <div class="meta-row">
         <span>Версія документа <b>0.1</b></span>
@@ -347,7 +347,7 @@
 
     <!-- 1 -->
     <h2 id="s1"><span class="num">01</span>Про документ</h2>
-    <p>Це технічна специфікація проєкту AI Loadboard — вантажної біржі з прямим з'єднанням вантажовідправника і перевізника, без брокера-посередника. На відміну від інвесторського огляду (<code>project-documentation.html</code>), тут немає маркетингового спрощення: документ описує систему так, як її бачить інженерна команда — включно з тим, що ще не побудовано.</p>
+    <p>Це технічна специфікація проєкту LoadBoardGram — вантажної біржі з прямим з'єднанням вантажовідправника і перевізника, без брокера-посередника. На відміну від інвесторського огляду (<code>project-documentation.html</code>), тут немає маркетингового спрощення: документ описує систему так, як її бачить інженерна команда — включно з тим, що ще не побудовано.</p>
     <p>Аудиторія: технічні співзасновники, майбутні інженери, що приєднуються до команди, і технічний due diligence з боку інвестора.</p>
     <p>Кожен розділ і кожен рядок таблиці позначені міткою зрілості:</p>
     <p>
@@ -361,7 +361,7 @@
 
     <!-- 2 -->
     <h2 id="s2"><span class="num">02</span>Огляд системи та рівень зрілості</h2>
-    <p>AI Loadboard — двостороння платформа: вантажовідправник публікує вантаж, перевізник бачить його і бере напряму, без брокера. Довгострокове бачення — не лише дошка оголошень, а система, де AI виконує роботу диспетчера й брокера: підбирає вантаж, прогнозує ставку, веде перші переговори, перевіряє контрагента і обробляє документи.</p>
+    <p>LoadBoardGram — двостороння платформа: вантажовідправник публікує вантаж, перевізник бачить його і бере напряму, без брокера. Довгострокове бачення — не лише дошка оголошень, а система, де AI виконує роботу диспетчера й брокера: підбирає вантаж, прогнозує ставку, веде перші переговори, перевіряє контрагента і обробляє документи.</p>
 
     <div class="table-wrap">
       <table>
@@ -969,7 +969,7 @@ CREATE TABLE documents (
     <p>Пункти 1–2 закрито до початку роботи над AI, як і планувалося: без FK-звʼязку вантажу з власником неможливо було б коректно побудувати ані trust scoring, ані персоналізований matching, ані журнал переговорів — уся AI-підсистема з розділу 7 спирається саме на цей звʼязок.</p>
 
     <footer class="doc-footer">
-      <span>AI Loadboard · Технічна документація v0.1</span>
+      <span>LoadBoardGram · Технічна документація v0.1</span>
       <span>17.08.2026</span>
     </footer>
 
@@ -979,7 +979,7 @@ CREATE TABLE documents (
 <div class="shell" data-lang="en">
 
   <aside class="toc">
-    <div class="brand"><b>AI Loadboard</b>Technical Documentation · v0.1</div>
+    <div class="brand"><b>LoadBoardGram</b>Technical Documentation · v0.1</div>
     <nav>
       <ol>
         <li><a href="#s1-en">About this document</a></li>
@@ -1014,7 +1014,7 @@ CREATE TABLE documents (
 
     <div class="cover">
       <div class="kicker">Engineering specification · internal document</div>
-      <h1>AI Loadboard — technical documentation</h1>
+      <h1>LoadBoardGram — technical documentation</h1>
       <p class="subtitle">System architecture, data model, AI subsystem, and engineering decisions — from what's already running to what's designed for scale.</p>
       <div class="meta-row">
         <span>Document version <b>0.1</b></span>
@@ -1026,7 +1026,7 @@ CREATE TABLE documents (
 
     <!-- 1 -->
     <h2 id="s1-en"><span class="num">01</span>About this document</h2>
-    <p>This is the technical specification for AI Loadboard — a freight marketplace that connects shippers and carriers directly, with no broker in between. Unlike the investor overview (<code>project-documentation.html</code>), there's no marketing simplification here: the document describes the system the way the engineering team sees it — including what hasn't been built yet.</p>
+    <p>This is the technical specification for LoadBoardGram — a freight marketplace that connects shippers and carriers directly, with no broker in between. Unlike the investor overview (<code>project-documentation.html</code>), there's no marketing simplification here: the document describes the system the way the engineering team sees it — including what hasn't been built yet.</p>
     <p>Audience: technical co-founders, future engineers joining the team, and investor-side technical due diligence.</p>
     <p>Every section and every table row carries a maturity label:</p>
     <p>
@@ -1040,7 +1040,7 @@ CREATE TABLE documents (
 
     <!-- 2 -->
     <h2 id="s2-en"><span class="num">02</span>Overview &amp; maturity</h2>
-    <p>AI Loadboard is a two-sided platform: a shipper posts a load, a carrier sees it and takes it directly — no broker. The long-term vision isn't just a bulletin board — it's a system where AI does the work of a dispatcher and a broker: matching loads, forecasting rates, running the first round of negotiation, vetting counterparties, and processing documents.</p>
+    <p>LoadBoardGram is a two-sided platform: a shipper posts a load, a carrier sees it and takes it directly — no broker. The long-term vision isn't just a bulletin board — it's a system where AI does the work of a dispatcher and a broker: matching loads, forecasting rates, running the first round of negotiation, vetting counterparties, and processing documents.</p>
 
     <div class="table-wrap">
       <table>
@@ -1647,7 +1647,7 @@ CREATE TABLE documents (
     <p>Items 1–2 are closed, ahead of AI work as planned: without an FK link between a load and its owner, trust scoring, personalized matching, and a negotiation log couldn't have been built correctly — the entire AI subsystem in section 7 relies on exactly that link.</p>
 
     <footer class="doc-footer">
-      <span>AI Loadboard · Technical Documentation v0.1</span>
+      <span>LoadBoardGram · Technical Documentation v0.1</span>
       <span>2026-08-17</span>
     </footer>
 
@@ -1666,7 +1666,7 @@ CREATE TABLE documents (
     buttons.forEach(function (b) {
       b.setAttribute('aria-pressed', b.dataset.lang === lang ? 'true' : 'false');
     });
-    try { localStorage.setItem('ai-loadboard-doc-lang', lang); } catch (e) {}
+    try { localStorage.setItem('loadboardgram-doc-lang', lang); } catch (e) {}
   }
 
   buttons.forEach(function (b) {
@@ -1674,7 +1674,7 @@ CREATE TABLE documents (
   });
 
   var saved = null;
-  try { saved = localStorage.getItem('ai-loadboard-doc-lang'); } catch (e) {}
+  try { saved = localStorage.getItem('loadboardgram-doc-lang'); } catch (e) {}
   apply(saved === 'en' ? 'en' : 'uk');
 })();
 </script>

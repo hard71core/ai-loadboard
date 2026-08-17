@@ -28,7 +28,7 @@ export default function App() {
             <span className="brand-mark">
               <BoltIcon />
             </span>
-            AI&nbsp;Loadboard
+            LoadBoardGram
           </Link>
           <nav className="site-nav">
             <NavLink to="/loads" className={({ isActive }) => (isActive ? "active" : "")}>

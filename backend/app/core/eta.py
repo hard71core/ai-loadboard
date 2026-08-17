@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 # Nominatim's usage policy expects identifiable traffic and asks for a
 # descriptive User-Agent on server-side callers in particular (unlike a
 # browser tab, a backend process sends no Referer at all otherwise).
-_USER_AGENT = "ai-loadboard-demo/1.0 (+https://github.com/hard71core/ai-loadboard)"
+_USER_AGENT = "loadboardgram-demo/1.0 (+https://github.com/hard71core/loadboardgram)"
 _TIMEOUT_SECONDS = 5.0
 
 # OSRM's default driving profile estimates a car's travel time — no
