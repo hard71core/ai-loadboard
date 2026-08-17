@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 7 files, 48 tests today.
+be tested first: 8 files, 65 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -182,11 +182,25 @@ revocation, see its docstring) but still rejects on an actual network
 failure. `global.fetch` is stubbed with `vi.stubGlobal` per test, no
 `AuthContext`/component involved — this is the one file in the frontend
 suite testing a plain module with no React in the loop besides
-`geocode.test.ts`.
+`geocode.test.ts`. `frontend/src/App.test.tsx` covers the shell: routing
+(all four paths render their page), the brand link and nav active-state,
+the auth-status area's three states (loading → neither button nor badge,
+logged out → Log in/Sign up, logged in → company/role badge + Log out
+wired to `logout()`), and the auth modal — opens in the right mode from
+either header button or a routed page's own `openAuth` prop, closes via
+the panel's `onClose` or an overlay click, and a click inside the panel
+itself doesn't close it (the overlay's `onClick` vs. the inner div's
+`stopPropagation()`). `./AuthContext` is mocked at the module level (a
+plain `useAuth()` stub, not a real `AuthProvider`) and so are the four
+routed page components plus `AuthPanel` — each already has its own tests
+(or, for the pages, is still an open gap below) and pulls in `api.ts`
+dependencies this file has no reason to also exercise; `HomePage`'s mock
+exposes its `openAuth` prop via a button so the "a page opens the modal
+itself" path is covered too, not just the header's own buttons.
 
-Everything else — `HomePage`, `LoadDetailPage`, `DocsPage`, `RouteMap.tsx`
-(Leaflet — would need jsdom canvas/geometry shims), `App.tsx`'s shell/nav —
-has no tests yet. That's the next gap, not a secret one.
+Everything else — `HomePage`, `LoadDetailPage`, `DocsPage`, and
+`RouteMap.tsx` (Leaflet — would need jsdom canvas/geometry shims) — has no
+tests yet. That's the next gap, not a secret one.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails
