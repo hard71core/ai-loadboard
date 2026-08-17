@@ -587,6 +587,54 @@ a {
   opacity: 1;
 }
 
+/* ---------- combobox (state/city search, post-a-load form) ---------- */
+
+.combobox {
+  position: relative;
+}
+
+.combobox input:disabled {
+  color: var(--muted-2);
+  background: var(--surface);
+  cursor: not-allowed;
+}
+
+.combobox-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+}
+
+.combobox-option {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.combobox-option.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.combobox-status {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 /* ---------- modal overlay (auth panel) ---------- */
 
 .modal-overlay {

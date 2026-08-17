@@ -135,10 +135,11 @@ service) and frontend lint+test+build on every push/PR via GitHub Actions.
   carrier's own history (equipment types and lane states they've run
   before); a carrier with no history yet just sees the newest loads first
 - Posting a new load — available only to authenticated shippers; origin and
-  destination are picked from cascading state → city dropdowns (a fixed
-  reference list, `frontend/src/usLocations.ts`) rather than typed
-  free-text, so every posted load's location always geocodes correctly on
-  the map and the arrival estimate instead of a typo silently breaking them
+  destination are picked via search, not typed free-text — a state first
+  (a fixed 51-entry list), then a city/town/village within that state
+  (live search as you type, `frontend/src/placeSearch.ts`) — so every
+  posted load's location always geocodes correctly on the map and the
+  arrival estimate instead of a typo silently breaking them
 - "Accept load" — available only to authenticated carriers; they take the load
   directly, with no broker in between
 - Statuses: Open → Accepted → Completed

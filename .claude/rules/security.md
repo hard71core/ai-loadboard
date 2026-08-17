@@ -158,3 +158,17 @@ but doesn't stop the theft itself the way an httpOnly cookie would.
   volume, but is still no substitute for real rate limiting or a paid
   provider before production traffic. Tracked as P2, same reasoning as the
   two items above.
+- `frontend/src/placeSearch.ts` calls Photon (`photon.komoot.io`, Komoot's
+  keyless public geocoder) directly from the browser — live, debounced
+  city/town/village search for the post-a-load form's city picker. Same
+  shape of gap as the three items above: no key, no backend proxy, no rate
+  limiting beyond an in-memory per-session cache, and it's explicitly a
+  public demo instance with no uptime or rate guarantee — same reasoning
+  as `geocode.ts`/`routing.ts`. Deliberately a *different* provider than
+  those two (Nominatim, used elsewhere): Nominatim doesn't do true prefix/
+  typeahead matching (tried it first — querying "Chicag" while still
+  typing "Chicago" returns nothing), Photon is built for exactly that
+  autocomplete use case. Tracked as P2, same reasoning as the geocode.ts/
+  routing.ts items above — this is now the fourth third-party mapping
+  service this app depends on with no production-grade guarantee behind
+  any of them (Nominatim ×2 call sites, OSRM ×2, now Photon).

@@ -2,8 +2,10 @@ import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { acceptLoad, createLoad, fetchLoads, fetchMatches, searchLoads } from "../api";
 import { useAuth } from "../AuthContext";
+import Combobox from "../components/Combobox";
 import { STATUS_LABEL } from "../constants";
 import { SparkleIcon } from "../icons";
+import { searchPlaces } from "../placeSearch";
 import type { Load, LoadCreatePayload } from "../types";
 import { US_STATES } from "../usLocations";
 
@@ -28,11 +30,16 @@ interface LocationValue {
 
 const EMPTY_LOCATION: LocationValue = { state: "", city: "" };
 
-/** State + city as two cascading <select>s rather than a free-text field —
-picking from a fixed list guarantees every posted load's origin/destination
-is a real "City, ST" pair that geocode.ts and core/eta.py's Nominatim calls
-can always resolve, instead of a typo silently breaking the map/ETA later.
-See usLocations.ts for why the list itself isn't exhaustive. */
+/** State + city as two searchable comboboxes rather than a free-text field
+— picking a real place from search results guarantees every posted load's
+origin/destination is a "City, ST" pair that geocode.ts and core/eta.py's
+Nominatim calls can always resolve, instead of a typo silently breaking the
+map/ETA later. The state list is fixed (usLocations.ts, 51 entries, no
+network call); the city list is a live, debounced search scoped to
+whichever state is already picked (placeSearch.ts, backed by Photon rather
+than Nominatim — see that file's docstring for why) — every real city,
+town, or village it knows about, not just a handful of the largest
+metros. */
 function LocationFields({
   legend,
   value,
@@ -42,43 +49,40 @@ function LocationFields({
   value: LocationValue;
   onChange: (value: LocationValue) => void;
 }) {
-  const cities = US_STATES.find((s) => s.code === value.state)?.cities ?? [];
+  const stateName = US_STATES.find((s) => s.code === value.state)?.name ?? "";
+
   return (
     <>
       <label>
         {legend} — state
-        <select
-          required
-          value={value.state}
-          onChange={(e) => onChange({ state: e.target.value, city: "" })}
-        >
-          <option value="" disabled>
-            Select a state
-          </option>
-          {US_STATES.map((s) => (
-            <option key={s.code} value={s.code}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <Combobox
+          placeholder="Search states…"
+          value={stateName}
+          search={(query) => {
+            const q = query.trim().toLowerCase();
+            const matches = q
+              ? US_STATES.filter((s) => s.name.toLowerCase().includes(q))
+              : US_STATES;
+            return matches.map((s) => ({ value: s.code, label: s.name }));
+          }}
+          onSelect={(option) => onChange({ state: option.value, city: "" })}
+        />
       </label>
       <label>
         {legend} — city
-        <select
-          required
-          value={value.city}
+        <Combobox
+          placeholder="Search cities, towns, villages…"
+          disabledPlaceholder="Select a state first"
           disabled={!value.state}
-          onChange={(e) => onChange({ ...value, city: e.target.value })}
-        >
-          <option value="" disabled>
-            {value.state ? "Select a city" : "Select a state first"}
-          </option>
-          {cities.map((city) => (
-            <option key={city} value={city}>
-              {city}
-            </option>
-          ))}
-        </select>
+          value={value.city}
+          minChars={2}
+          debounceMs={350}
+          search={async (query) => {
+            const places = await searchPlaces(query, stateName, value.state);
+            return places.map((p) => ({ value: `${p.city}, ${p.stateCode}`, label: p.city }));
+          }}
+          onSelect={(option) => onChange({ ...value, city: option.label })}
+        />
       </label>
     </>
   );
@@ -171,6 +175,13 @@ export default function LoadsPage({ openAuth }: Props) {
   async function handleCreate(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user || !token) return;
+    // Combobox is a plain text input, not a <select> — the browser's native
+    // `required` validation doesn't cover "did they actually pick a real
+    // option, not just type something and tab away". Check explicitly.
+    if (!origin.state || !origin.city || !destination.state || !destination.city) {
+      setError("Pick an origin and destination from the search results, not just typed text.");
+      return;
+    }
     setSubmitting(true);
     try {
       const payload: LoadCreatePayload = {

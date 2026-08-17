@@ -196,12 +196,14 @@ pages/
                        3 shipped AI features, how-it-works, CTA band; fetches
                        GET /api/loads only for the hero's live load counts
   LoadsPage.tsx       "/loads" — list, search, matches, the post-a-load form.
-                      Origin/destination are two cascading state→city
-                      <select> pairs (LocationFields, defined in this file)
-                      built from usLocations.ts, not free text — picking
-                      from a fixed list guarantees every posted load
-                      geocodes correctly on RouteMap/EtaWindow instead of a
-                      typo silently breaking them later
+                      Origin/destination are two Combobox pairs
+                      (LocationFields, defined in this file) — state (a
+                      fixed 51-entry list, usLocations.ts) then city
+                      (live search scoped to that state, placeSearch.ts),
+                      not free text — picking a real place from search
+                      results guarantees every posted load geocodes
+                      correctly on RouteMap/EtaWindow instead of a typo
+                      silently breaking them later
   LoadDetailPage.tsx  "/loads/:id" — full detail for one load, accept action
   DocsPage.tsx         "/docs" — links out to the static copies of
                         docs/*.html + *.pdf under frontend/public/docs/ (see
@@ -218,6 +220,13 @@ components/
                         core/eta.py); renders nothing for an open load,
                         since RouteMap's own estimate above already covers
                         plain transit time regardless of status
+  Combobox.tsx          generic searchable dropdown (a plain text input
+                        that filters/searches as you type) — backs both
+                        LoadsPage.tsx's state picker (instant, synchronous,
+                        the fixed US_STATES list) and its city picker
+                        (debounced, async, live placeSearch.ts search)
+                        with one implementation; debouncing is opt-in per
+                        instance (debounceMs prop), 0 for a sync source
 AuthContext.tsx     auth state (token/user), localStorage-backed (both the
                     access and refresh token — see security.md for the
                     XSS trade-off that implies). Boots by exchanging a
@@ -239,10 +248,21 @@ routing.ts             the only frontend place that calls a third-party
                        fail-closed contract and rate-limit caveat as
                        geocode.ts, see security.md; core/eta.py also calls
                        OSRM server-side, same caveat there too
-usLocations.ts          fixed reference list of US states + a handful of
-                        major cities each, backing LoadsPage.tsx's post-a-
-                        load location pickers — not exhaustive on purpose,
-                        see its own docstring
+usLocations.ts          fixed reference list of the 50 states + DC, used
+                        for the post-a-load form's state picker and to
+                        turn a chosen state code into its full name for
+                        placeSearch.ts's queries
+placeSearch.ts          the only frontend place that calls Photon
+                        (photon.komoot.io, keyless) — live city/town/
+                        village search for the post-a-load form's city
+                        picker, scoped to whichever state's already
+                        chosen; deliberately not Nominatim like
+                        geocode.ts/routing.ts — Nominatim doesn't do
+                        true prefix/typeahead matching (tried it first;
+                        "Chicag" found nothing), Photon is built for
+                        exactly that. Same fail-closed contract and
+                        public-demo-server caveat as geocode.ts/routing.ts,
+                        see security.md
 ```
 `openAuth` (opens the login/register panel) lives in `App.tsx` and is passed
 down as a prop to both pages rather than promoted to context — there are

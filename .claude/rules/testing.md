@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 5 files, 21 tests today.
+be tested first: 6 files, 28 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -155,14 +155,22 @@ active — "Log in" while on the login tab, "Sign up" once switched to
 register — so tests query `button[type="submit"]` directly rather than by
 role name, see the file's comment.) `frontend/src/geocode.test.ts` is the
 odd one out — a pure-function test for `haversineMiles`, no
-mocking/rendering needed at all. `frontend/src/pages/LoadsPage.test.tsx`
-covers the post-a-load form's cascading state → city `<select>` pair
-(`usLocations.ts`) — the city select stays disabled with nothing but a
-placeholder until a state is picked, picking a state resets any
-previously-chosen city (a Dallas left over from Texas would be wrong once
-the state's Florida), and a full submit posts the combined `"City, ST"`
-strings to `createLoad`; also checks the form/button don't render at all
-for a non-shipper.
+mocking/rendering needed at all. `frontend/src/components/Combobox.test.tsx`
+covers the generic searchable-dropdown component itself: shows every
+option on focus with `minChars=0` (the default), filters as you type and
+calls `onSelect` with the clicked option, respects `minChars` (no search
+below the threshold), debounces an async source so a burst of keystrokes
+only fires one request — for the last value, not once per character —
+stays inert while `disabled`, and arrow-key navigation + Enter commits the
+highlighted option. `frontend/src/pages/LoadsPage.test.tsx` covers the
+post-a-load form's state → city pair built on top of `Combobox`
+(`../placeSearch` mocked at the module level) — the city combobox stays
+disabled with nothing but a placeholder until a state is picked, picking a
+state resets any previously-chosen city (a Dallas left over from Texas
+would be wrong once the state's Florida), typed-but-never-selected text is
+rejected at submit rather than silently posted as-is, a full submit posts
+the combined `"City, ST"` strings to `createLoad`, and the form/button
+don't render at all for a non-shipper.
 
 Everything else — `HomePage`, `LoadDetailPage`, `DocsPage`, `RouteMap.tsx`
 (Leaflet — would need jsdom canvas/geometry shims), `App.tsx`'s shell/nav,
