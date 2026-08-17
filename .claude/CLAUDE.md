@@ -58,6 +58,16 @@ apply everywhere no matter what file you're touching.
   this pass review from a senior engineer," not "does it run once" — see
   `.claude/rules/code-style.md` and `.claude/rules/testing.md` for what that
   means concretely here.
+- **Keep `.claude/PROGRESS.local.md` in sync with every change.** It's a
+  local, gitignored done/to-do summary (source of truth is still
+  `docs/technical-documentation.html` §17 and `security.md`'s
+  Resolved/Known-gaps sections — this file just collects that state for
+  quick reference). Whenever something gets built, fixed, or closed: either
+  mark the matching entry done there, or, if it isn't listed yet, add it.
+  Whenever a new gap gets spotted (on top of flagging it per
+  `security.md`'s "say so explicitly" rule): add it under Open if it isn't
+  there already. If the file doesn't exist yet, create it rather than
+  skipping this step.
 
 ## Git workflow
 
