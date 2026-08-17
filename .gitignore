@@ -23,3 +23,8 @@ frontend/vitest.config.d.ts
 # Claude Code local session state — not shared project config.
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Local done/to-do tracking note — source of truth is docs/technical-
+# documentation.html §17 and .claude/rules/security.md, this is just a
+# convenience summary, not meant to be committed.
+.claude/PROGRESS.local.md
