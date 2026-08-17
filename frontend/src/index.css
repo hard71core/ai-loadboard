@@ -580,6 +580,13 @@ a {
   box-shadow: 0 0 0 3px rgba(23, 224, 163, 0.15);
 }
 
+.form-grid select:disabled {
+  color: var(--muted-2);
+  background: var(--surface);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 /* ---------- modal overlay (auth panel) ---------- */
 
 .modal-overlay {

@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 4 files, 18 tests today.
+be tested first: 5 files, 21 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -155,12 +155,18 @@ active — "Log in" while on the login tab, "Sign up" once switched to
 register — so tests query `button[type="submit"]` directly rather than by
 role name, see the file's comment.) `frontend/src/geocode.test.ts` is the
 odd one out — a pure-function test for `haversineMiles`, no
-mocking/rendering needed at all.
+mocking/rendering needed at all. `frontend/src/pages/LoadsPage.test.tsx`
+covers the post-a-load form's cascading state → city `<select>` pair
+(`usLocations.ts`) — the city select stays disabled with nothing but a
+placeholder until a state is picked, picking a state resets any
+previously-chosen city (a Dallas left over from Texas would be wrong once
+the state's Florida), and a full submit posts the combined `"City, ST"`
+strings to `createLoad`; also checks the form/button don't render at all
+for a non-shipper.
 
-Everything else — every page (`HomePage`, `LoadsPage`, `LoadDetailPage`,
-`DocsPage`), `RouteMap.tsx` (Leaflet — would need jsdom canvas/geometry
-shims), `App.tsx`'s shell/nav, `api.ts` itself — has no tests yet. That's
-the next gap, not a secret one.
+Everything else — `HomePage`, `LoadDetailPage`, `DocsPage`, `RouteMap.tsx`
+(Leaflet — would need jsdom canvas/geometry shims), `App.tsx`'s shell/nav,
+`api.ts` itself — has no tests yet. That's the next gap, not a secret one.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails

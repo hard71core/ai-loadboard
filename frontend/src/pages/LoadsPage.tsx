@@ -5,11 +5,10 @@ import { useAuth } from "../AuthContext";
 import { STATUS_LABEL } from "../constants";
 import { SparkleIcon } from "../icons";
 import type { Load, LoadCreatePayload } from "../types";
+import { US_STATES } from "../usLocations";
 
 interface FormState {
   title: string;
-  origin: string;
-  destination: string;
   equipment_type: string;
   weight_lbs: string;
   price_usd: string;
@@ -17,12 +16,73 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   title: "",
-  origin: "",
-  destination: "",
   equipment_type: "Dry Van",
   weight_lbs: "",
   price_usd: "",
 };
+
+interface LocationValue {
+  state: string;
+  city: string;
+}
+
+const EMPTY_LOCATION: LocationValue = { state: "", city: "" };
+
+/** State + city as two cascading <select>s rather than a free-text field —
+picking from a fixed list guarantees every posted load's origin/destination
+is a real "City, ST" pair that geocode.ts and core/eta.py's Nominatim calls
+can always resolve, instead of a typo silently breaking the map/ETA later.
+See usLocations.ts for why the list itself isn't exhaustive. */
+function LocationFields({
+  legend,
+  value,
+  onChange,
+}: {
+  legend: string;
+  value: LocationValue;
+  onChange: (value: LocationValue) => void;
+}) {
+  const cities = US_STATES.find((s) => s.code === value.state)?.cities ?? [];
+  return (
+    <>
+      <label>
+        {legend} — state
+        <select
+          required
+          value={value.state}
+          onChange={(e) => onChange({ state: e.target.value, city: "" })}
+        >
+          <option value="" disabled>
+            Select a state
+          </option>
+          {US_STATES.map((s) => (
+            <option key={s.code} value={s.code}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        {legend} — city
+        <select
+          required
+          value={value.city}
+          disabled={!value.state}
+          onChange={(e) => onChange({ ...value, city: e.target.value })}
+        >
+          <option value="" disabled>
+            {value.state ? "Select a city" : "Select a state first"}
+          </option>
+          {cities.map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
+        </select>
+      </label>
+    </>
+  );
+}
 
 interface Props {
   openAuth: (mode: "login" | "register") => void;
@@ -38,6 +98,8 @@ export default function LoadsPage({ openAuth }: Props) {
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [origin, setOrigin] = useState<LocationValue>(EMPTY_LOCATION);
+  const [destination, setDestination] = useState<LocationValue>(EMPTY_LOCATION);
   const [submitting, setSubmitting] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,11 +175,15 @@ export default function LoadsPage({ openAuth }: Props) {
     try {
       const payload: LoadCreatePayload = {
         ...form,
+        origin: `${origin.city}, ${origin.state}`,
+        destination: `${destination.city}, ${destination.state}`,
         weight_lbs: Number(form.weight_lbs),
         price_usd: Number(form.price_usd),
       };
       await createLoad(payload, token);
       setForm(EMPTY_FORM);
+      setOrigin(EMPTY_LOCATION);
+      setDestination(EMPTY_LOCATION);
       setShowForm(false);
       await loadData();
     } catch (e) {
@@ -218,24 +284,8 @@ export default function LoadsPage({ openAuth }: Props) {
                   placeholder="e.g. Home appliances"
                 />
               </label>
-              <label>
-                Origin
-                <input
-                  required
-                  value={form.origin}
-                  onChange={(e) => setForm({ ...form, origin: e.target.value })}
-                  placeholder="City, state"
-                />
-              </label>
-              <label>
-                Destination
-                <input
-                  required
-                  value={form.destination}
-                  onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                  placeholder="City, state"
-                />
-              </label>
+              <LocationFields legend="Origin" value={origin} onChange={setOrigin} />
+              <LocationFields legend="Destination" value={destination} onChange={setDestination} />
               <label>
                 Equipment type
                 <select

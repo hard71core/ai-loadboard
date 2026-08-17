@@ -195,7 +195,13 @@ pages/
   HomePage.tsx        "/" — marketing landing page: hero, value props, the
                        3 shipped AI features, how-it-works, CTA band; fetches
                        GET /api/loads only for the hero's live load counts
-  LoadsPage.tsx       "/loads" — list, search, matches, the post-a-load form
+  LoadsPage.tsx       "/loads" — list, search, matches, the post-a-load form.
+                      Origin/destination are two cascading state→city
+                      <select> pairs (LocationFields, defined in this file)
+                      built from usLocations.ts, not free text — picking
+                      from a fixed list guarantees every posted load
+                      geocodes correctly on RouteMap/EtaWindow instead of a
+                      typo silently breaking them later
   LoadDetailPage.tsx  "/loads/:id" — full detail for one load, accept action
   DocsPage.tsx         "/docs" — links out to the static copies of
                         docs/*.html + *.pdf under frontend/public/docs/ (see
@@ -233,6 +239,10 @@ routing.ts             the only frontend place that calls a third-party
                        fail-closed contract and rate-limit caveat as
                        geocode.ts, see security.md; core/eta.py also calls
                        OSRM server-side, same caveat there too
+usLocations.ts          fixed reference list of US states + a handful of
+                        major cities each, backing LoadsPage.tsx's post-a-
+                        load location pickers — not exhaustive on purpose,
+                        see its own docstring
 ```
 `openAuth` (opens the login/register panel) lives in `App.tsx` and is passed
 down as a prop to both pages rather than promoted to context — there are
