@@ -7,6 +7,18 @@ paths:
 
 # Testing
 
+## Process: tests first
+
+New functionality gets its test(s) written before its implementation — see
+`.claude/CLAUDE.md`'s ground rules. Write the test(s) that describe the
+behavior you're about to build, run them to confirm they fail (and fail for
+the reason you expect, not a typo in the test itself), then write the
+implementation until they pass. Applies to both `pytest` (backend) and
+Vitest (frontend) work below. This is about sequencing for *new* behavior
+specifically — a bug fix still gets a regression test either way, but
+there's no working-and-untested implementation to write a test against
+first, so "first" doesn't apply the same way there.
+
 ## Backend
 
 `pytest` is configured via `backend/pyproject.toml`

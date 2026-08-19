@@ -59,6 +59,15 @@ apply everywhere no matter what file you're touching.
   this pass review from a senior engineer," not "does it run once" — see
   `.claude/rules/code-style.md` and `.claude/rules/testing.md` for what that
   means concretely here.
+- **New functionality is built test-first.** Write the test(s) that pin down
+  the behavior you're about to build, run them to confirm they fail (and
+  fail for the expected reason, not a typo), then write the implementation
+  until they pass — the test exists before the code that satisfies it, not
+  just alongside it. Applies to both backend (`pytest`) and frontend
+  (Vitest) work; see `.claude/rules/testing.md`. This is about sequencing
+  for *new* behavior specifically — a bug fix still gets its own regression
+  test, but there's no working-but-untested implementation to write a test
+  against first.
 - **Keep `.claude/PROGRESS.local.md` in sync with every change.** It's a
   local, gitignored done/to-do summary (source of truth is still
   `docs/technical-documentation.html` §17 and `security.md`'s
