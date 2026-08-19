@@ -7,6 +7,7 @@ import { STATUS_LABEL } from "../constants";
 import { SparkleIcon } from "../icons";
 import { searchPlaces } from "../placeSearch";
 import type { Load, LoadCreatePayload } from "../types";
+import { US_CITIES } from "../usCities";
 import { US_STATES } from "../usLocations";
 
 interface FormState {
@@ -39,7 +40,12 @@ network call); the city list is a live, debounced search scoped to
 whichever state is already picked (placeSearch.ts, backed by Photon rather
 than Nominatim — see that file's docstring for why) — every real city,
 town, or village it knows about, not just a handful of the largest
-metros. */
+metros. On focus, before any text is typed, it instead shows a small
+curated list for the selected state (usCities.ts, ~5 well-known cities) —
+Photon has no "browse this state" mode that works without a search term
+(see usCities.ts's docstring), so this static list is what fills that
+zero-input moment; the instant the user types even one character, live
+Photon search takes over exactly as before. */
 function LocationFields({
   legend,
   value,
@@ -75,9 +81,15 @@ function LocationFields({
           disabledPlaceholder="Select a state first"
           disabled={!value.state}
           value={value.city}
-          minChars={2}
+          minChars={0}
           debounceMs={350}
           search={async (query) => {
+            if (!query.trim()) {
+              return (US_CITIES[value.state] ?? []).map((city) => ({
+                value: `${city}, ${value.state}`,
+                label: city,
+              }));
+            }
             const places = await searchPlaces(query, stateName, value.state);
             return places.map((p) => ({ value: `${p.city}, ${p.stateCode}`, label: p.city }));
           }}

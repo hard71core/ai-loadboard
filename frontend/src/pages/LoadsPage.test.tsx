@@ -149,6 +149,29 @@ describe("LoadsPage — post-a-load location fields", () => {
     expect(screen.getByLabelText("Origin — city")).toBeEnabled();
   });
 
+  it("shows a curated list of cities on focus, before typing, with no call to live search — then hands off to live search once typing starts", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderLoadsPage();
+
+    await waitFor(() => expect(fetchLoads).toHaveBeenCalled());
+    await user.click(await screen.findByRole("button", { name: "+ Post a load" }));
+
+    await pickFromCombobox(user, "Origin — state", "Texas", "Texas");
+
+    const originCity = await screen.findByLabelText("Origin — city");
+    await user.click(originCity);
+
+    // The curated fallback list for Texas, shown before any typing — see usCities.ts.
+    expect(await screen.findByRole("option", { name: "Houston" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Dallas" })).toBeInTheDocument();
+    expect(searchPlaces).not.toHaveBeenCalled();
+
+    // The moment typing starts, live search takes over exactly as before.
+    vi.mocked(searchPlaces).mockResolvedValue([DALLAS]);
+    await user.type(originCity, "Dal");
+    await waitFor(() => expect(searchPlaces).toHaveBeenCalledWith("Dal", "Texas", "TX"));
+  });
+
   it("doesn't show the post-load form or button for a non-shipper", async () => {
     mockUser = { id: 2, email: "carrier@example.com", company_name: "Test Carrier Co", role: "carrier" };
     renderLoadsPage();

@@ -156,7 +156,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 13 files, 105 tests today.
+be tested first: 13 files, 106 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -188,8 +188,12 @@ disabled with nothing but a placeholder until a state is picked, picking a
 state resets any previously-chosen city (a Dallas left over from Texas
 would be wrong once the state's Florida), typed-but-never-selected text is
 rejected at submit rather than silently posted as-is, a full submit posts
-the combined `"City, ST"` strings to `createLoad`, and the form/button
-don't render at all for a non-shipper. `frontend/src/api.test.ts` covers
+the combined `"City, ST"` strings to `createLoad`, the form/button don't
+render at all for a non-shipper, and — the curated on-focus fallback,
+`usCities.ts` — focusing the city combobox right after picking a state
+shows that state's curated options with zero calls to `searchPlaces`, and
+typing even one character still hands off to live search exactly as
+before (`searchPlaces` called with the typed query). `frontend/src/api.test.ts` covers
 every exported call in `api.ts` — the shared `handle()` error path (a
 success response's JSON passed through as-is, a non-OK response's server
 `detail` message surfaced, and the two fallback-to-generic-message cases:

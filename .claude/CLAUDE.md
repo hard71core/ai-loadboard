@@ -228,7 +228,15 @@ pages/
                       not free text — picking a real place from search
                       results guarantees every posted load geocodes
                       correctly on RouteMap/EtaWindow instead of a typo
-                      silently breaking them later
+                      silently breaking them later. The city field shows a
+                      small curated list for the selected state
+                      (usCities.ts, ~5 well-known cities) immediately on
+                      focus, before any typing — Photon has no "browse this
+                      state" mode without a search term, so live search
+                      alone can't cover that zero-input moment (see
+                      usCities.ts's docstring); the instant the user types
+                      even one character, live placeSearch.ts search takes
+                      over exactly as before
   LoadDetailPage.tsx  "/loads/:id" — full detail for one load, accept action
   ProfilePage.tsx      "/profile" — personal cabinet: profile fields
                         (company_name is the only self-editable one, via
@@ -302,6 +310,14 @@ placeSearch.ts          the only frontend place that calls Photon
                         exactly that. Same fail-closed contract and
                         public-demo-server caveat as geocode.ts/routing.ts,
                         see security.md
+usCities.ts               small curated set (~5) of well-known cities per
+                          state — the city Combobox's initial option list,
+                          shown on focus before any typing, since Photon has
+                          no "browse this state, no search term" mode (tried
+                          it, 400s — see this file's own docstring for what
+                          was ruled out); live placeSearch.ts search takes
+                          over the moment the user types anything. Same
+                          fixed-list-no-network-call spirit as usLocations.ts
 ```
 `openAuth` (opens the login/register panel) lives in `App.tsx` and is passed
 down as a prop to both pages rather than promoted to context — there are
