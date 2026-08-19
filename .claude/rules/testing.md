@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 9 files, 72 tests today.
+be tested first: 10 files, 82 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -212,9 +212,27 @@ own docstring) with no dependents besides this page, so a test asserting
 on real target numbers is more useful than one that drives animation
 frames.
 
-Everything else — `LoadDetailPage`, `DocsPage`, and `RouteMap.tsx`
-(Leaflet — would need jsdom canvas/geometry shims) — has no tests yet.
-That's the next gap, not a secret one.
+`frontend/src/pages/LoadDetailPage.test.tsx` covers the detail page's own
+logic: the loading skeleton while `fetchLoad` is in flight, the error
+state (fetch rejection surfaced as the alert message, back link to `/`),
+fetching the `:id` from the route, the rendered detail fields (title,
+origin/destination header, status badge, equipment, formatted weight/
+price, shipper name, and the carrier row only once one exists), and the
+accept flow's every branch — a logged-in carrier's "Accept load" button
+calling `acceptLoad` and refetching, an accept failure surfacing
+`actionError` without refetching, a logged-out visitor's "Log in to
+accept" button calling `openAuth("register")` without ever calling
+`acceptLoad`, no button at all for a shipper viewing an open load, and
+the "← Back to loads" `<button>` (not the top `<Link>`, see the file's
+comment on why the test disambiguates the two) that appears once a load
+is no longer open, navigating to `/`. `../components/RouteMap` (Leaflet)
+and `../components/EtaWindow` are mocked out at the module level — each
+either already has its own tests or, for `RouteMap`, is a documented gap
+below — and `../api` is mocked the same way as `LoadsPage.test.tsx`.
+
+Everything else — `DocsPage` and `RouteMap.tsx` itself (Leaflet — would
+need jsdom canvas/geometry shims) — has no tests yet. That's the next
+gap, not a secret one.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails
