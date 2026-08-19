@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 11 files, 86 tests today.
+be tested first: 12 files, 94 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -227,8 +227,8 @@ the "← Back to loads" `<button>` (not the top `<Link>`, see the file's
 comment on why the test disambiguates the two) that appears once a load
 is no longer open, navigating to `/`. `../components/RouteMap` (Leaflet)
 and `../components/EtaWindow` are mocked out at the module level — each
-either already has its own tests or, for `RouteMap`, is a documented gap
-below — and `../api` is mocked the same way as `LoadsPage.test.tsx`.
+already has its own tests — and `../api` is mocked the same way as
+`LoadsPage.test.tsx`.
 
 `frontend/src/pages/DocsPage.test.tsx` covers the docs page — it's a
 static component with no hooks, no API calls, and no auth, rendered from
@@ -242,9 +242,39 @@ real security property here — every link carries `target="_blank"` paired
 with `rel="noopener noreferrer"`, not just `target="_blank"` alone.
 `DocsPage.tsx` now at 100% line/branch/function coverage (was untested).
 
-Everything else — `RouteMap.tsx` itself (Leaflet — would need jsdom
-canvas/geometry shims) — has no tests yet. That's the next gap, not a
-secret one.
+`frontend/src/components/RouteMap.test.tsx` covers the Leaflet route map
+itself — the component the rest of the suite mocks out (see
+`LoadDetailPage.test.tsx` above). Real Leaflet map rendering needs canvas/
+geometry support jsdom doesn't have, but that boundary turned out to be
+narrower than it looked: `RouteMap`'s own logic — the loading/unavailable/
+ready state machine, `formatDuration`'s two branches (driven through
+rendered output, not exported just to make it testable), the solid-vs-
+dashed "real route vs. straight-line fallback" line, the caption text, and
+the effect's `cancelled` guard against a stale in-flight response after
+`origin`/`destination` change — doesn't actually require a real Leaflet
+map instance. `react-leaflet` is mocked at the module level (`vi.mock`,
+plain stub components rendering their props/children into `div`s, the same
+pattern `LoadDetailPage.test.tsx` uses to mock `RouteMap` itself
+wholesale), which sidesteps the jsdom canvas/geometry problem entirely
+since no real map ever gets created. `leaflet` itself (`L.divIcon`,
+`L.latLngBounds`) is *not* mocked — those are plain data/DOM-string
+helpers, not map rendering, and run fine under jsdom as-is, confirmed by
+running the suite rather than assumed. `../geocode` and `../routing` are
+mocked the same way `EtaWindow.test.tsx` mocks `../api`, so no real
+network/Nominatim/OSRM calls happen. 8 tests, and `RouteMap.tsx` lands at
+100% line/branch/function coverage — the Leaflet-mocking approach turned
+out not to cost any coverage after all, contrary to this file's earlier
+assumption that it "would need jsdom canvas/geometry shims."
+
+`DocsPage` and `RouteMap.tsx` were the last two files originally named in
+this gap — every page/component that item once listed by name now has at
+least some coverage. Not the same as full coverage: several files here
+still have real, deliberately-uncovered defensive-guard branches (see
+`LoadDetailPage.tsx`'s coverage note above), and modules never named in
+the original gap (`routing.ts`, `placeSearch.ts`, most of `geocode.ts`
+beyond `haversineMiles`) still have none at all. See
+`.claude/rules/security.md`'s Known Gaps for the current framing of
+what's left.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails

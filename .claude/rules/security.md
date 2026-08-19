@@ -72,7 +72,7 @@ code.
 - ~~No frontend test runner existed at all~~ — **fixed the infrastructure,
   not the coverage.** Vitest + Testing Library now exist
   (`frontend/vitest.config.ts`), wired into CI as its own step, and 11
-  files/86 tests cover the highest-logic pieces first:
+  files/94 tests cover the highest-logic pieces first:
   `AuthContext.tsx`'s bootstrap-via-refresh and `logout()` (the module this
   gap most directly motivated — see the trade-off callout below, this is
   exactly the code with a real security property to protect), `EtaWindow.tsx`'s
@@ -82,9 +82,16 @@ code.
   shell/nav/auth modal, `HomePage.tsx`'s stats and CTAs,
   `LoadDetailPage.tsx`'s detail fields and accept flow, and
   `DocsPage.tsx`'s doc cards and their `target="_blank"`/
-  `rel="noopener noreferrer"` links. See `.claude/rules/testing.md`. This
-  is explicitly a first slice — `RouteMap.tsx` still has zero tests,
-  tracked below, not closed.
+  `rel="noopener noreferrer"` links, and `RouteMap.tsx`'s loading/
+  unavailable/ready state machine, distance/duration formatting, and
+  real-route-vs-straight-line-fallback branching (`react-leaflet` mocked
+  at the module level — no real Leaflet map instance needed under jsdom
+  after all — 100% line/branch coverage). See `.claude/rules/testing.md`.
+  This is still explicitly a first slice — every page/component
+  originally named in this gap now has *some* coverage, but coverage
+  within each file is partial (see `.claude/rules/testing.md`), and any
+  new page added later starts from zero again until it gets its own test
+  file, tracked below, not closed.
 - ~~`frontend/`'s `vite@^5.4.0` transitively pulled a vulnerable `esbuild`
   (GHSA-67mh-4wv8-2f99)~~ — **fixed.** `vite` bumped `^5.4.0` → `^8.2.1`
   (with `@vitejs/plugin-react` → `^6.0.5` and `vitest`/`@vitest/coverage-v8`
@@ -122,12 +129,15 @@ but doesn't stop the theft itself the way an httpOnly cookie would.
   needs an actual XSS elsewhere first, and there's no known one, but this
   is the kind of gap that's cheap to close later and expensive to discover
   in an incident.
-- Frontend test coverage is still a first slice — 11 files/86 tests (see
-  "Resolved" above and `.claude/rules/testing.md`), but `RouteMap.tsx` has
-  none. Tracked as P1, downgraded in urgency from "the runner doesn't even
-  exist" and now from "most pages have none" — but not closed,
-  `RouteMap.tsx` in particular carries real geocoding/routing fallback
-  logic with no regression safety net yet.
+- Frontend test coverage is still a first slice — 12 files/94 tests (see
+  "Resolved" above and `.claude/rules/testing.md`). Every page/component
+  originally named in this gap (`HomePage`, `LoadsPage`, `LoadDetailPage`,
+  `DocsPage`, `RouteMap.tsx`, `App.tsx`'s shell/nav, `api.ts`) now has at
+  least some coverage. Tracked as P1, downgraded further in urgency, but
+  not closed — coverage within each file is still partial (see
+  `.claude/rules/testing.md` for exactly what's covered vs. not), and any
+  new page added later starts from zero again until it gets its own test
+  file.
 - `POST /api/search` (`core/llm.py`) has no rate limiting, no per-request
   or per-period cost cap, and no auth requirement — once `NL_SEARCH_ENABLED`
   is turned on, anyone can trigger billed Anthropic API calls at will (the
