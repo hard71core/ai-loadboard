@@ -30,6 +30,23 @@ class LoadOut(LoadBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PaginatedLoads(BaseModel):
+    """Envelope for GET /api/loads — its MVP pagination is page/page_size
+    offset pagination, not the cursor-based pagination (`?cursor=`)
+    docs/technical-documentation.html section 8 lists as the Phase 2
+    target; see that section for the reconciliation note. `total`/
+    `total_pages` reflect whatever `status` filter was applied, same as
+    `items`. A `page` beyond the last available one returns an empty
+    `items` list (still HTTP 200, not a 404) — there's nothing wrong with
+    the request, the result set for that page is just empty."""
+
+    items: list[LoadOut]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6)

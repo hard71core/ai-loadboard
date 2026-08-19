@@ -530,6 +530,17 @@ page flow rather than centered/animated like the marketing hero's. */
   letter-spacing: -0.01em;
 }
 
+/* Reuses .toolbar's flex layout for the Prev / "Page X of Y" / Next row
+below the loads table (LoadsPage.tsx) — only the top spacing differs from
+a header toolbar, so this stays a one-property addition rather than a
+separate component's worth of new rules. */
+.toolbar.pagination {
+  margin-top: 16px;
+  margin-bottom: 0;
+  justify-content: center;
+  gap: 20px;
+}
+
 /* ---------- alerts ---------- */
 
 .alert {

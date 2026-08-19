@@ -41,7 +41,7 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-**Coverage is 99% line coverage across `app/`, 69 tests, as of the test-coverage
+**Coverage is 99% line coverage across `app/`, 78 tests, as of the test-coverage
 pass that closed this out** (`pytest --cov=app --cov-report=term-missing`
 reports it per-module) — every `api/routes/*` module and `core/eta.py` at
 100%, `core/llm.py` and `core/security.py` at ~98%. The two remaining gaps
@@ -57,7 +57,7 @@ empty `loads` table, which no test in a shared/persistent local Postgres
 can reliably arrange without clearing state other tests depend on; CI's
 fresh DB does exercise it, just not as a targeted unit test.
 
-There are eleven test files: `backend/tests/test_health.py` (a smoke test),
+There are twelve test files: `backend/tests/test_health.py` (a smoke test),
 `backend/tests/test_load_ownership.py` (auth/role/ownership on the three
 mutating load endpoints, plus the full status-transition state machine —
 404s on accept/complete for an unknown load, accepting an already-taken
@@ -100,7 +100,24 @@ with it 401s), `backend/tests/test_my_loads.py` (`GET /api/loads/mine` —
 the personal-cabinet page's load list: requires a token, empty for a user
 with no loads, a shipper sees only their own posted loads, a carrier only
 their own accepted ones — not the shipper's untouched ones or another
-carrier's — and newest-first ordering).
+carrier's — and newest-first ordering), `backend/tests/test_load_list.py`
+(`GET /api/loads`'s pagination — the plain list route's own dedicated
+file, since none of the other ten touch it beyond a bare smoke-level call:
+the default page/page_size envelope shape, newest-first ordering, explicit
+page/page_size paginating without overlap between pages, combining status
+with page/page_size, a page past the last one returning an empty `items`
+list at HTTP 200 rather than a 404, `total_pages == ceil(total /
+page_size)`, and `page`/`page_size` validation — `page_size=0`,
+`page_size=101`, `page=0` all 422. This is a real, shared, persistent
+local Postgres carrying hundreds of loads from other test runs and manual
+demo use by the time these run, so none of these tests assert on an
+absolute total — only on before/after deltas the test itself creates, or
+on the `total_pages` formula computed from whatever `total` the API
+reports at the time, same discipline as `test_matching.py`'s cold-start
+test above it, which this file's shape change also touched — comparing
+`/matches`'s full array against a single large page of `GET
+/api/loads?status=open` instead of the bare-array response that route
+used to return).
 
 `backend/tests/conftest.py` holds the migration fixture above plus the
 shared `register_user(client, role)` helper (extracted out of
@@ -156,7 +173,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 13 files, 106 tests today.
+be tested first: 13 files, 114 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -193,7 +210,14 @@ render at all for a non-shipper, and — the curated on-focus fallback,
 `usCities.ts` — focusing the city combobox right after picking a state
 shows that state's curated options with zero calls to `searchPlaces`, and
 typing even one character still hands off to live search exactly as
-before (`searchPlaces` called with the typed query). `frontend/src/api.test.ts` covers
+before (`searchPlaces` called with the typed query) — plus a second
+describe block for the plain-list view's pagination controls: "Page X of
+N" with Prev/Next disabled correctly at both ends, clicking Next/Prev
+calls `fetchLoads` with the right `{ page, pageSize }` and walks every
+page boundary, the controls disappear entirely once search or matches is
+active (`fetchLoads` is mocked page-aware via `mockImplementation`,
+`searchLoads`/`fetchMatches` resolve a plain array as they still do), and
+posting a new load resets back to page 1. `frontend/src/api.test.ts` covers
 every exported call in `api.ts` — the shared `handle()` error path (a
 success response's JSON passed through as-is, a non-OK response's server
 `detail` message surfaced, and the two fallback-to-generic-message cases:
@@ -202,7 +226,12 @@ URL/method/headers/body each function sends (including which calls carry
 a `Bearer` token and which don't), and `logoutUser`'s deliberately
 different contract — it swallows a non-OK HTTP status (best-effort
 revocation, see its docstring) but still rejects on an actual network
-failure. `global.fetch` is stubbed with `vi.stubGlobal` per test, no
+failure. `fetchLoads` specifically: resolves the `PaginatedLoads` envelope
+rather than a bare array, hits `/api/loads` with no query string at all
+when called with no params, and builds the query string only from
+whichever of `status`/`page`/`pageSize` were actually passed — never all
+three, never the backend's defaults spelled out. `global.fetch` is stubbed
+with `vi.stubGlobal` per test, no
 `AuthContext`/component involved — this is the one file in the frontend
 suite testing a plain module with no React in the loop besides
 `geocode.test.ts`. `frontend/src/App.test.tsx` covers the shell: routing
@@ -223,10 +252,14 @@ exposes its `openAuth` prop via a button so the "a page opens the modal
 itself" path is covered too, not just the header's own buttons.
 
 `frontend/src/pages/HomePage.test.tsx` covers the page's own logic: it
-fetches loads on mount and derives its two hero stats from the result —
-total load count and, separately, only loads with `status === "open"` —
-falling back to zero on either stat (not a crash) when the fetch rejects;
-both "Sign up free" CTAs (hero and the bottom CTA band) call `openAuth`
+fires two `fetchLoads` calls on mount — `{ pageSize: 1 }` for the total
+count and `{ status: "open", pageSize: 1 }` for the open count — and
+reads each call's `PaginatedLoads.total` rather than fetching every load
+just to take its length; a `mockStats(total, open)` helper distinguishes
+the two calls in the mock by whether `status` was passed, mirroring how
+`fetchLoads` itself distinguishes them via the query string. Both stats
+fall back to zero (not a crash) when either fetch rejects; both "Sign up
+free" CTAs (hero and the bottom CTA band) call `openAuth`
 `("register")` and disappear once a user is logged in; both "Browse
 loads" links point to `/loads` regardless of auth state. `../api` is
 mocked at the module level for `fetchLoads`, `../AuthContext` for

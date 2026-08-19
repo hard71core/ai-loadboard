@@ -31,6 +31,12 @@ interface LocationValue {
 
 const EMPTY_LOCATION: LocationValue = { state: "", city: "" };
 
+// Matches the backend's default page_size (backend/app/api/routes/loads.py)
+// — kept explicit here rather than relying on the server default so the
+// frontend's own pagination math (page/page_size sent on every request)
+// stays obvious from this one constant.
+const PAGE_SIZE = 20;
+
 /** State + city as two searchable comboboxes rather than a free-text field
 — picking a real place from search results guarantees every posted load's
 origin/destination is a "City, ST" pair that geocode.ts and core/eta.py's
@@ -111,6 +117,8 @@ export default function LoadsPage({ openAuth }: Props) {
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -126,13 +134,23 @@ export default function LoadsPage({ openAuth }: Props) {
   const [loadingMatches, setLoadingMatches] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadData(1);
   }, []);
 
-  async function loadData() {
+  /** Only the plain-list browsing view paginates — search (searchLoads)
+  and matching (fetchMatches) results stay full arrays below, unpaginated
+  and out of scope for this MVP (see types.ts's PaginatedLoads docstring).
+  Every caller passes the page it wants explicitly rather than relying on
+  `page` state, since a stale closure over `page` would otherwise re-fetch
+  whatever page was active when the handler was created, not the one the
+  user just navigated to. */
+  async function loadData(pageToLoad: number) {
     try {
       setLoading(true);
-      setLoads(await fetchLoads());
+      const result = await fetchLoads({ page: pageToLoad, pageSize: PAGE_SIZE });
+      setLoads(result.items);
+      setPage(result.page);
+      setTotalPages(result.total_pages);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -160,7 +178,7 @@ export default function LoadsPage({ openAuth }: Props) {
   async function clearSearch() {
     setSearchQuery("");
     setSearchActive(false);
-    await loadData();
+    await loadData(1);
   }
 
   async function handleShowMatches() {
@@ -181,7 +199,7 @@ export default function LoadsPage({ openAuth }: Props) {
 
   async function clearMatches() {
     setMatchesActive(false);
-    await loadData();
+    await loadData(1);
   }
 
   async function handleCreate(e: FormEvent<HTMLFormElement>) {
@@ -208,7 +226,9 @@ export default function LoadsPage({ openAuth }: Props) {
       setOrigin(EMPTY_LOCATION);
       setDestination(EMPTY_LOCATION);
       setShowForm(false);
-      await loadData();
+      // Reset to page 1 — a freshly-posted load is newest-first, so it
+      // shows up there, not on whatever page was active before posting.
+      await loadData(1);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -221,16 +241,24 @@ export default function LoadsPage({ openAuth }: Props) {
     try {
       await acceptLoad(id, token);
       // Stay in whichever view was active instead of silently dropping back
-      // to the plain list.
+      // to the plain list — and, in the plain-list case, stay on the same
+      // page rather than resetting to page 1, since the user was browsing
+      // there, not just arriving.
       if (matchesActive) {
         setLoads(await fetchMatches(token));
       } else {
-        await loadData();
+        await loadData(page);
       }
     } catch (e) {
       setError((e as Error).message);
     }
   }
+
+  function goToPage(target: number) {
+    loadData(target);
+  }
+
+  const showPagination = !searchActive && !matchesActive;
 
   return (
     <>
@@ -420,6 +448,30 @@ export default function LoadsPage({ openAuth }: Props) {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {showPagination && !loading && (
+          <div className="toolbar pagination">
+            <button
+              className="btn small"
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1}
+            >
+              ← Prev
+            </button>
+            <span className="muted">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              className="btn small"
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages}
+            >
+              Next →
+            </button>
           </div>
         )}
       </div>

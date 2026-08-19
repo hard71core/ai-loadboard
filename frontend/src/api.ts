@@ -3,7 +3,9 @@ import type {
   Load,
   LoadCreatePayload,
   LoadETA,
+  LoadStatus,
   LoginPayload,
+  PaginatedLoads,
   ProfileUpdatePayload,
   RegisterPayload,
   User,
@@ -25,9 +27,25 @@ async function handle<T>(res: Response, fallbackMessage: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function fetchLoads(): Promise<Load[]> {
-  const res = await fetch(`${API_URL}/api/loads`);
-  return handle<Load[]>(res, "Failed to load the load list");
+/** Only the plain-list browsing view on LoadsPage.tsx (and HomePage.tsx's
+hero stats) call this — searchLoads/fetchMatches below stay full-array
+responses, unpaginated, deliberately out of scope for this MVP (see
+backend/app/schemas.py's PaginatedLoads docstring). Builds the query
+string only from params actually passed, so a plain `fetchLoads()` still
+hits `/api/loads` with no query string at all rather than sending the
+backend's defaults explicitly. */
+export async function fetchLoads(params?: {
+  status?: LoadStatus;
+  page?: number;
+  pageSize?: number;
+}): Promise<PaginatedLoads> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.page !== undefined) query.set("page", String(params.page));
+  if (params?.pageSize !== undefined) query.set("page_size", String(params.pageSize));
+  const qs = query.toString();
+  const res = await fetch(`${API_URL}/api/loads${qs ? `?${qs}` : ""}`);
+  return handle<PaginatedLoads>(res, "Failed to load the load list");
 }
 
 export async function fetchLoad(id: number): Promise<Load> {

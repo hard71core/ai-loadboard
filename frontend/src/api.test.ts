@@ -18,6 +18,7 @@ import type {
   LoadCreatePayload,
   LoadETA,
   LoginPayload,
+  PaginatedLoads,
   RegisterPayload,
 } from "./types";
 
@@ -38,6 +39,14 @@ const FAKE_LOAD: Load = {
   status: "open",
   created_at: "2026-08-01T00:00:00Z",
   accepted_at: null,
+};
+
+const FAKE_PAGE: PaginatedLoads = {
+  items: [FAKE_LOAD],
+  total: 1,
+  page: 1,
+  page_size: 20,
+  total_pages: 1,
 };
 
 const FAKE_ETA: LoadETA = {
@@ -85,8 +94,8 @@ afterEach(() => {
 
 describe("shared error handling", () => {
   it("resolves with the parsed JSON body on a 2xx response", async () => {
-    fetchMock.mockResolvedValue(jsonResponse([FAKE_LOAD]));
-    await expect(fetchLoads()).resolves.toEqual([FAKE_LOAD]);
+    fetchMock.mockResolvedValue(jsonResponse(FAKE_PAGE));
+    await expect(fetchLoads()).resolves.toEqual(FAKE_PAGE);
   });
 
   it("throws the server's detail message on a non-OK response", async () => {
@@ -106,10 +115,27 @@ describe("shared error handling", () => {
 });
 
 describe("fetchLoads", () => {
-  it("GETs /api/loads with no auth header", async () => {
-    fetchMock.mockResolvedValue(jsonResponse([FAKE_LOAD]));
+  it("GETs /api/loads with no auth header and no query string when called with no params", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(FAKE_PAGE));
     await fetchLoads();
     expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/api/loads`);
+  });
+
+  it("resolves with the paginated envelope, not a bare array", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(FAKE_PAGE));
+    await expect(fetchLoads()).resolves.toEqual(FAKE_PAGE);
+  });
+
+  it("builds a query string only from the params actually passed", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(FAKE_PAGE));
+    await fetchLoads({ status: "open", page: 2, pageSize: 10 });
+    expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/api/loads?status=open&page=2&page_size=10`);
+  });
+
+  it("omits params that weren't passed rather than sending defaults", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(FAKE_PAGE));
+    await fetchLoads({ page: 3 });
+    expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/api/loads?page=3`);
   });
 });
 

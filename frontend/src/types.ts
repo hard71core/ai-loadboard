@@ -31,6 +31,22 @@ export interface LoadETA {
   eta_latest: string | null;
 }
 
+/** Envelope for GET /api/loads — see backend/app/schemas.py's
+PaginatedLoads docstring for the reasoning (page/page_size offset
+pagination as the MVP; docs/technical-documentation.html section 8 still
+lists cursor pagination as the Phase 2 target). `total`/`total_pages`
+reflect whatever `status` filter was applied, same as `items`. Only
+LoadsPage.tsx's plain-list browsing view (`!searchActive && !matchesActive`)
+paginates — search (`searchLoads`) and matching (`fetchMatches`) results
+stay full arrays, unchanged, deliberately out of scope. */
+export interface PaginatedLoads {
+  items: Load[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface LoadCreatePayload {
   title: string;
   origin: string;

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlaceResult } from "../placeSearch";
-import type { User } from "../types";
+import type { Load, PaginatedLoads, User } from "../types";
 import LoadsPage from "./LoadsPage";
 
 vi.mock("../api", () => ({
@@ -25,7 +25,7 @@ vi.mock("../AuthContext", () => ({
   useAuth: () => ({ user: mockUser, token: "fake-access-token" }),
 }));
 
-import { createLoad, fetchLoads } from "../api";
+import { createLoad, fetchLoads, fetchMatches, searchLoads } from "../api";
 import { searchPlaces } from "../placeSearch";
 
 function renderLoadsPage() {
@@ -51,11 +51,42 @@ async function pickFromCombobox(user: ReturnType<typeof userEvent.setup>, labelT
 const DALLAS: PlaceResult = { city: "Dallas", stateCode: "TX" };
 const MIAMI: PlaceResult = { city: "Miami", stateCode: "FL" };
 
+function fakeLoad(overrides: Partial<Load> = {}): Load {
+  return {
+    id: 1,
+    title: "Reefer load",
+    origin: "Dallas, TX",
+    destination: "Houston, TX",
+    equipment_type: "Reefer",
+    weight_lbs: 38000,
+    price_usd: 850,
+    shipper_name: "Acme Shipping",
+    carrier_name: null,
+    status: "open",
+    created_at: "2026-08-17T00:00:00Z",
+    accepted_at: null,
+    ...overrides,
+  };
+}
+
+function fakePage(items: Load[], overrides: Partial<PaginatedLoads> = {}): PaginatedLoads {
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    page_size: 20,
+    total_pages: 1,
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   mockUser = SHIPPER;
-  vi.mocked(fetchLoads).mockReset().mockResolvedValue([]);
+  vi.mocked(fetchLoads).mockReset().mockResolvedValue(fakePage([]));
   vi.mocked(createLoad).mockReset();
   vi.mocked(searchPlaces).mockReset().mockResolvedValue([]);
+  vi.mocked(fetchMatches).mockReset();
+  vi.mocked(searchLoads).mockReset();
 });
 
 describe("LoadsPage — post-a-load location fields", () => {
@@ -178,5 +209,106 @@ describe("LoadsPage — post-a-load location fields", () => {
 
     await waitFor(() => expect(fetchLoads).toHaveBeenCalled());
     expect(screen.queryByRole("button", { name: "+ Post a load" })).not.toBeInTheDocument();
+  });
+});
+
+describe("LoadsPage — pagination", () => {
+  /** Three pages worth of loads, page-aware — mirrors the backend envelope
+  well enough to drive Prev/Next through every boundary. */
+  function mockThreePages() {
+    vi.mocked(fetchLoads).mockImplementation(async (params) => {
+      const page = params?.page ?? 1;
+      return fakePage([fakeLoad({ id: page })], { page, page_size: 20, total: 45, total_pages: 3 });
+    });
+  }
+
+  it("shows Page 1 of N with Prev disabled and Next enabled on the first page", async () => {
+    mockThreePages();
+    renderLoadsPage();
+
+    expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /prev/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
+  });
+
+  it("Next/Prev walk pages and fetch with the right page number, disabling at both ends", async () => {
+    mockThreePages();
+    const user = userEvent.setup({ delay: null });
+    renderLoadsPage();
+    await screen.findByText("Page 1 of 3");
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(await screen.findByText("Page 2 of 3")).toBeInTheDocument();
+    expect(fetchLoads).toHaveBeenCalledWith({ page: 2, pageSize: 20 });
+    expect(screen.getByRole("button", { name: /prev/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(await screen.findByText("Page 3 of 3")).toBeInTheDocument();
+    expect(fetchLoads).toHaveBeenCalledWith({ page: 3, pageSize: 20 });
+    expect(screen.getByRole("button", { name: /next/i })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: /prev/i }));
+    expect(await screen.findByText("Page 2 of 3")).toBeInTheDocument();
+    expect(fetchLoads).toHaveBeenCalledWith({ page: 2, pageSize: 20 });
+  });
+
+  it("hides pagination controls while a search is active", async () => {
+    mockThreePages();
+    vi.mocked(searchLoads).mockResolvedValue([fakeLoad()]);
+    const user = userEvent.setup({ delay: null });
+    renderLoadsPage();
+    await screen.findByText("Page 1 of 3");
+
+    await user.type(screen.getByPlaceholderText(/Search:/), "reefer");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+
+    await waitFor(() => expect(screen.getByText("Search results")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /prev/i })).not.toBeInTheDocument();
+  });
+
+  it("hides pagination controls while recommended matches are active", async () => {
+    mockUser = { id: 2, email: "carrier@example.com", company_name: "Test Carrier Co", role: "carrier" };
+    mockThreePages();
+    vi.mocked(fetchMatches).mockResolvedValue([fakeLoad()]);
+    const user = userEvent.setup({ delay: null });
+    renderLoadsPage();
+    await screen.findByText("Page 1 of 3");
+
+    await user.click(screen.getByRole("button", { name: "Recommended for you" }));
+
+    await waitFor(() => expect(screen.getByText("Recommended for you")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /prev/i })).not.toBeInTheDocument();
+  });
+
+  it("resets to page 1 after posting a new load", async () => {
+    mockThreePages();
+    vi.mocked(createLoad).mockResolvedValue(fakeLoad({ id: 999 }));
+    vi.mocked(searchPlaces).mockImplementation(async (query) => {
+      if (query.toLowerCase().startsWith("dal")) return [DALLAS];
+      if (query.toLowerCase().startsWith("mia")) return [MIAMI];
+      return [];
+    });
+    const user = userEvent.setup({ delay: null });
+    renderLoadsPage();
+    await screen.findByText("Page 1 of 3");
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    await screen.findByText("Page 2 of 3");
+
+    await user.click(await screen.findByRole("button", { name: "+ Post a load" }));
+    await pickFromCombobox(user, "Origin — state", "Texas", "Texas");
+    await pickFromCombobox(user, "Origin — city", "Dal", "Dallas");
+    await pickFromCombobox(user, "Destination — state", "Florida", "Florida");
+    await pickFromCombobox(user, "Destination — city", "Mia", "Miami");
+    await user.type(screen.getByPlaceholderText("e.g. Home appliances"), "Test cargo");
+    await user.type(screen.getByLabelText("Weight (lbs)"), "10000");
+    await user.type(screen.getByLabelText("Rate (USD)"), "500");
+    await user.click(screen.getByRole("button", { name: "Post load" }));
+
+    await waitFor(() => expect(fetchLoads).toHaveBeenCalledWith({ page: 1, pageSize: 20 }));
+    expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
   });
 });

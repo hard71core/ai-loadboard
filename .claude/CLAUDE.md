@@ -185,20 +185,39 @@ api/
                        PATCH /me self-edits company_name only (email/role
                        stay fixed post-registration), doesn't retroactively
                        rename the caller's past loads — see schemas.UserUpdate
-    loads.py           list/detail/create/accept/complete/mine — the detail
+    loads.py           list/detail/create/accept/complete/mine — GET "" (the
+                        list) paginates: page/page_size query params
+                        (default 1/20, page_size capped at 100), response
+                        is schemas.PaginatedLoads (items/total/page/
+                        page_size/total_pages), combinable with the
+                        existing ?status= filter; a page past the last one
+                        returns an empty items list, still HTTP 200, not a
+                        404. Offset pagination is the MVP — docs/technical-
+                        documentation.html section 8 still lists cursor
+                        pagination (?cursor=) as the Phase 2 target for
+                        when the dataset outgrows offset's performance
+                        characteristics. matching.py's /matches and
+                        search.py's NL search query the DB directly, not
+                        through this route, so they're unaffected and stay
+                        full-array responses — pagination there is
+                        explicitly out of scope for now. The detail
                         route is GET /{load_id:int}; the :int converter is
                         load-bearing, not just typing hygiene, see its
                         docstring for why (route order vs. matching.py);
                         accept sets loads.accepted_at, the only "transit
                         started" timestamp eta.py has to work with; GET
                         /mine backs the personal-cabinet page — every load
-                        the caller shows up on, either side, no role gate
+                        the caller shows up on, either side, no role gate,
+                        and stays a full array (it's a personal list, not
+                        the main browsing table, so pagination doesn't
+                        apply)
     matching.py          smart matching — deterministic ranking heuristic
                           (equipment + lane-state overlap with a carrier's
                           own history), no LLM, no ML model yet
     search.py           NL search — parses via core/llm.py, applies the
                          result as SQLAlchemy filters, same query shape as
-                         loads.py's list endpoint when there's no filter
+                         loads.py's list endpoint's status filter (not its
+                         pagination — this stays a full-array response)
     eta.py               arrival estimate — deterministic heuristic via
                           core/eta.py, no auth (public read, like the load
                           detail route)
@@ -219,9 +238,22 @@ constants.ts         STATUS_LABEL/ROLE_LABEL shared between pages
 pages/
   HomePage.tsx        "/" — marketing landing page: hero, value props, the
                        3 shipped AI features, how-it-works, CTA band; fetches
-                       GET /api/loads only for the hero's live load counts
+                       GET /api/loads twice for the hero's live load counts —
+                       {pageSize: 1} for the total, {status: "open",
+                       pageSize: 1} for the open count — reading each
+                       call's PaginatedLoads.total rather than fetching
+                       every load just to take its length
   LoadsPage.tsx       "/loads" — list, search, matches, the post-a-load form.
-                      Origin/destination are two Combobox pairs
+                      Only the plain-list browsing view (loadData(), not
+                      search/matches) paginates — a page state plus Prev/
+                      Next controls below the table, wired to GET
+                      /api/loads's page/page_size params (PAGE_SIZE = 20).
+                      Resets to page 1 on mount, after posting a load, and
+                      when returning from search/matches; stays on the
+                      current page after accepting a load. searchLoads/
+                      fetchMatches results stay full arrays, unpaginated,
+                      unchanged — deliberately out of scope. Origin/
+                      destination are two Combobox pairs
                       (LocationFields, defined in this file) — state (a
                       fixed 51-entry list, usLocations.ts) then city
                       (live search scoped to that state, placeSearch.ts),
@@ -285,7 +317,12 @@ AuthContext.tsx     auth state (token/user), localStorage-backed (both the
                     company_name edit doesn't touch either token (they
                     encode the user's email, not their company_name), so it
                     just replaces the cached user object, no re-issue needed
-api.ts               every backend call in one place
+api.ts               every backend call in one place; fetchLoads() takes
+                      an optional { status?, page?, pageSize? } and
+                      returns types.ts's PaginatedLoads envelope, building
+                      its query string only from params actually passed
+                      (a bare fetchLoads() still hits /api/loads with no
+                      query string, not the backend's defaults spelled out)
 geocode.ts            the only frontend place that calls a third-party
                        geocoder (Nominatim, keyless) — see security.md for
                        its rate-limit caveat; backend/app/core/eta.py also

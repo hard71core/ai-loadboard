@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchLoads } from "../api";
-import type { Load, User } from "../types";
+import type { Load, PaginatedLoads, User } from "../types";
 import HomePage from "./HomePage";
 
 /** useCountUp is a purely cosmetic rAF-driven animation (see its own
@@ -50,6 +50,30 @@ function renderHomePage() {
   );
 }
 
+function fakePage(total: number, overrides: Partial<PaginatedLoads> = {}): PaginatedLoads {
+  return {
+    items: total > 0 ? [fakeLoad()] : [],
+    total,
+    page: 1,
+    page_size: 1,
+    total_pages: Math.max(1, total),
+    ...overrides,
+  };
+}
+
+/** HomePage derives its two hero stats from `PaginatedLoads.total`, not
+from fetching every load — one no-filter call (pageSize 1, just to read
+`.total`) for the total count, one `status: "open"` call (same trick) for
+the open count. Distinguishes the two calls by whether `status` was
+passed, same as `fetchLoads` itself distinguishes them via the query
+string. */
+function mockStats(totalCount: number, openCount: number) {
+  vi.mocked(fetchLoads).mockImplementation(async (params) => {
+    if (params?.status === "open") return fakePage(openCount);
+    return fakePage(totalCount);
+  });
+}
+
 beforeEach(() => {
   mockUser = null;
   openAuth.mockReset();
@@ -58,25 +82,20 @@ beforeEach(() => {
 
 describe("load stats", () => {
   it("fetches loads on mount and shows the total and open counts", async () => {
-    vi.mocked(fetchLoads).mockResolvedValue([
-      fakeLoad({ id: 1, status: "open" }),
-      fakeLoad({ id: 2, status: "open" }),
-      fakeLoad({ id: 3, status: "completed" }),
-    ]);
+    mockStats(3, 2);
 
     renderHomePage();
 
-    expect(fetchLoads).toHaveBeenCalledTimes(1);
+    expect(fetchLoads).toHaveBeenCalledTimes(2);
+    expect(fetchLoads).toHaveBeenCalledWith({ pageSize: 1 });
+    expect(fetchLoads).toHaveBeenCalledWith({ status: "open", pageSize: 1 });
     await waitFor(() => expect(screen.getByText("3")).toBeInTheDocument());
     expect(screen.getByText("Total loads").previousSibling).toHaveTextContent("3");
     expect(screen.getByText("Open now").previousSibling).toHaveTextContent("2");
   });
 
   it("only counts 'open' loads toward the Open now stat, not accepted/completed", async () => {
-    vi.mocked(fetchLoads).mockResolvedValue([
-      fakeLoad({ id: 1, status: "accepted" }),
-      fakeLoad({ id: 2, status: "completed" }),
-    ]);
+    mockStats(2, 0);
 
     renderHomePage();
 
@@ -89,7 +108,7 @@ describe("load stats", () => {
 
     renderHomePage();
 
-    await waitFor(() => expect(fetchLoads).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetchLoads).toHaveBeenCalledTimes(2));
     expect(screen.getByText("Total loads").previousSibling).toHaveTextContent("0");
     expect(screen.getByText("Open now").previousSibling).toHaveTextContent("0");
   });
@@ -97,7 +116,7 @@ describe("load stats", () => {
 
 describe("signed-out CTAs", () => {
   beforeEach(() => {
-    vi.mocked(fetchLoads).mockResolvedValue([]);
+    mockStats(0, 0);
   });
 
   it("shows a 'Sign up free' button in the hero and the CTA band when logged out", async () => {

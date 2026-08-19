@@ -1,6 +1,7 @@
+import math
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -10,12 +11,39 @@ from ..deps import get_current_user, get_db
 router = APIRouter(prefix="/api/loads", tags=["loads"])
 
 
-@router.get("", response_model=list[schemas.LoadOut])
-def list_loads(status: str | None = None, db: Session = Depends(get_db)):
+@router.get("", response_model=schemas.PaginatedLoads)
+def list_loads(
+    status: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Page/page_size offset pagination — the MVP; docs/technical-
+    documentation.html section 8 still lists cursor pagination (`?cursor=`)
+    as the Phase 2 target for when the dataset is large enough that offset
+    pagination's performance characteristics (re-counting/re-scanning on
+    every page) start to matter. `matching.py`'s `/matches` and
+    `search.py`'s NL search stay full-array responses, unchanged — they
+    query the DB directly, not through this route, so this change doesn't
+    touch them; paginating their result sets is explicitly out of scope
+    here."""
     query = db.query(models.Load)
     if status:
         query = query.filter(models.Load.status == status)
-    return query.order_by(models.Load.created_at.desc()).all()
+    total = query.count()
+    items = (
+        query.order_by(models.Load.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    return schemas.PaginatedLoads(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=max(1, math.ceil(total / page_size)),
+    )
 
 
 @router.get("/mine", response_model=list[schemas.LoadOut])

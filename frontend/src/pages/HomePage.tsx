@@ -4,7 +4,6 @@ import { fetchLoads } from "../api";
 import { useAuth } from "../AuthContext";
 import { useCountUp } from "../hooks/useCountUp";
 import { BoltIcon, ClockIcon, PackageIcon, RouteIcon, SearchIcon, SparkleIcon } from "../icons";
-import type { Load } from "../types";
 
 interface Props {
   openAuth: (mode: "login" | "register") => void;
@@ -71,17 +70,24 @@ const STEPS = [
 
 export default function HomePage({ openAuth }: Props) {
   const { user } = useAuth();
-  const [loads, setLoads] = useState<Load[]>([]);
+  const [totalLoads, setTotalLoads] = useState(0);
+  const [openLoads, setOpenLoads] = useState(0);
 
+  // Two cheap calls (pageSize: 1 — the items themselves are never used
+  // here) rather than fetching every load just to read its length: the
+  // paginated envelope's `total` field already gives an exact count for
+  // whatever filter was passed, regardless of how many pages that implies.
   useEffect(() => {
-    fetchLoads()
-      .then(setLoads)
-      .catch(() => setLoads([]));
+    fetchLoads({ pageSize: 1 })
+      .then((page) => setTotalLoads(page.total))
+      .catch(() => setTotalLoads(0));
+    fetchLoads({ status: "open", pageSize: 1 })
+      .then((page) => setOpenLoads(page.total))
+      .catch(() => setOpenLoads(0));
   }, []);
 
-  const openCount = loads.filter((l) => l.status === "open").length;
-  const totalCount = useCountUp(loads.length);
-  const animatedOpenCount = useCountUp(openCount);
+  const totalCount = useCountUp(totalLoads);
+  const animatedOpenCount = useCountUp(openLoads);
 
   return (
     <>

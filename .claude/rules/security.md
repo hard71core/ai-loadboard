@@ -186,3 +186,13 @@ but doesn't stop the theft itself the way an httpOnly cookie would.
   routing.ts items above — this is now the fourth third-party mapping
   service this app depends on with no production-grade guarantee behind
   any of them (Nominatim ×2 call sites, OSRM ×2, now Photon).
+- `GET /api/loads` gained page/page_size pagination (`backend/app/api/routes/loads.py`,
+  `docs/technical-documentation.html` section 8), but `GET /api/loads/matches`
+  (`api/routes/matching.py`) and `POST /api/search` (`api/routes/search.py`)
+  were deliberately left unpaginated — both query the DB directly rather
+  than going through the list endpoint, so this change doesn't touch them.
+  Fine at demo scale, but both responses grow unbounded as the load count
+  grows, the same shape of issue pagination just closed for `GET
+  /api/loads`. Tracked as P2 — spotted while doing the pagination work,
+  not an urgent fix on its own, but worth closing alongside a future pass
+  on either endpoint.

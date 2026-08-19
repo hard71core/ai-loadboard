@@ -43,16 +43,26 @@ def test_matches_rejects_shipper_role():
 
 def test_matches_cold_start_matches_plain_open_list():
     """A carrier with zero history has no signal to rank on — matches must
-    equal the plain newest-first open list, not an empty or arbitrary one."""
+    equal the plain newest-first open list, not an empty or arbitrary one.
+    /matches stays an unpaginated full array (out of scope for the GET
+    /api/loads pagination MVP — see loads.py's docstring), so this compares
+    it against a single large page of GET /api/loads?status=open rather
+    than the bare array GET /api/loads itself used to return."""
     with TestClient(app) as client:
         carrier_token, _ = register_user(client, "carrier")
         matches_res = client.get(
             "/api/loads/matches", headers={"Authorization": f"Bearer {carrier_token}"}
         )
-        open_res = client.get("/api/loads?status=open")
+        open_res = client.get("/api/loads", params={"status": "open", "page_size": 100})
 
     assert matches_res.status_code == 200, matches_res.text
-    assert [load["id"] for load in matches_res.json()] == [load["id"] for load in open_res.json()]
+    assert open_res.status_code == 200, open_res.text
+    matches_ids = [load["id"] for load in matches_res.json()]
+    open_body = open_res.json()
+    assert len(matches_ids) == open_body["total"]
+    # /matches is unpaginated and newest-first, same ordering as a single
+    # page of GET /api/loads — the first page_size ids must line up exactly.
+    assert matches_ids[: open_body["page_size"]] == [load["id"] for load in open_body["items"]]
 
 
 def test_matches_ranks_history_matches_above_unrelated_loads():
