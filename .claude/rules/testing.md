@@ -137,7 +137,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 10 files, 82 tests today.
+be tested first: 11 files, 86 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -230,9 +230,21 @@ and `../components/EtaWindow` are mocked out at the module level — each
 either already has its own tests or, for `RouteMap`, is a documented gap
 below — and `../api` is mocked the same way as `LoadsPage.test.tsx`.
 
-Everything else — `DocsPage` and `RouteMap.tsx` itself (Leaflet — would
-need jsdom canvas/geometry shims) — has no tests yet. That's the next
-gap, not a secret one.
+`frontend/src/pages/DocsPage.test.tsx` covers the docs page — it's a
+static component with no hooks, no API calls, and no auth, rendered from
+a fixed `DOCS` array, so the tests assert on that array's shape rather
+than any behavior: both cards render their title, audience label, and
+body text (Project Overview/investor-facing, Technical Documentation/
+engineering spec), the heading and intro copy render, each card's
+"Open (UA/EN)" and "Download PDF" links point at that card's own
+`/docs/*.html`/`/docs/*.pdf` href (not the other card's), and — the one
+real security property here — every link carries `target="_blank"` paired
+with `rel="noopener noreferrer"`, not just `target="_blank"` alone.
+`DocsPage.tsx` now at 100% line/branch/function coverage (was untested).
+
+Everything else — `RouteMap.tsx` itself (Leaflet — would need jsdom
+canvas/geometry shims) — has no tests yet. That's the next gap, not a
+secret one.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails
