@@ -124,3 +124,65 @@ def test_me_rejects_a_validly_signed_token_with_no_subject_claim():
     with TestClient(app) as client:
         res = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 401
+
+
+def test_update_me_changes_company_name():
+    with TestClient(app) as client:
+        token, _ = register_user(client, "shipper")
+        res = client.patch(
+            "/api/auth/me",
+            json={"company_name": "Renamed Co"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200, res.text
+        assert res.json()["company_name"] == "Renamed Co"
+
+        # persisted, not just echoed back
+        follow_up = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert follow_up.json()["company_name"] == "Renamed Co"
+
+
+def test_update_me_requires_a_token():
+    with TestClient(app) as client:
+        res = client.patch("/api/auth/me", json={"company_name": "New Name"})
+    assert res.status_code == 401
+
+
+def test_update_me_rejects_a_blank_company_name():
+    with TestClient(app) as client:
+        token, _ = register_user(client, "shipper")
+        res = client.patch(
+            "/api/auth/me",
+            json={"company_name": ""},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert res.status_code == 422
+
+
+def test_update_me_does_not_retroactively_rename_past_loads():
+    """shipper_name/carrier_name are a denormalized cache set at post/accept
+    time (models.py's Load docstring) — renaming a company afterward must
+    not rewrite history on loads already posted under the old name. See
+    update_me()'s docstring for why this is accepted behavior, not a gap."""
+    with TestClient(app) as client:
+        token, original_name = register_user(client, "shipper")
+        load = client.post(
+            "/api/loads",
+            json={
+                "title": "Pre-rename load",
+                "origin": "Dallas, TX",
+                "destination": "Austin, TX",
+                "weight_lbs": 5000,
+                "price_usd": 300,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        ).json()
+
+        client.patch(
+            "/api/auth/me",
+            json={"company_name": "Renamed Co"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        unchanged = client.get(f"/api/loads/{load['id']}")
+    assert unchanged.json()["shipper_name"] == original_name

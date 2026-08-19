@@ -6,7 +6,7 @@ import App from "./App";
 import type { User } from "./types";
 
 /** App.tsx is the shell: header/nav/auth-status plus the auth modal and
-route wiring. The four routed pages and AuthPanel are mocked out here —
+route wiring. The five routed pages and AuthPanel are mocked out here —
 they each carry their own tests (or, for AuthPanel, AuthPanel.test.tsx)
 and pull in api.ts/AuthContext dependencies that are out of scope for a
 shell test. HomePage's mock exposes its openAuth prop via a button so the
@@ -45,6 +45,7 @@ vi.mock("./pages/HomePage", () => ({
 }));
 vi.mock("./pages/LoadsPage", () => ({ default: () => <div>Loads page</div> }));
 vi.mock("./pages/LoadDetailPage", () => ({ default: () => <div>Load detail page</div> }));
+vi.mock("./pages/ProfilePage", () => ({ default: () => <div>Profile page</div> }));
 vi.mock("./pages/DocsPage", () => ({ default: () => <div>Docs page</div> }));
 
 const FAKE_USER: User = {
@@ -81,6 +82,11 @@ describe("routing", () => {
   it("renders the load detail page at /loads/:id", () => {
     renderApp("/loads/42");
     expect(screen.getByText("Load detail page")).toBeInTheDocument();
+  });
+
+  it("renders the profile page at /profile", () => {
+    renderApp("/profile");
+    expect(screen.getByText("Profile page")).toBeInTheDocument();
   });
 
   it("renders the docs page at /docs", () => {
@@ -122,6 +128,15 @@ describe("auth status", () => {
     renderApp("/");
     expect(screen.getByText("Acme Freight · Carrier")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Log in" })).not.toBeInTheDocument();
+  });
+
+  it("links the company/role badge to /profile", () => {
+    mockAuthState = { user: FAKE_USER, loading: false };
+    renderApp("/");
+    expect(screen.getByRole("link", { name: "Acme Freight · Carrier" })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
   });
 
   it("calls logout when Log out is clicked", async () => {

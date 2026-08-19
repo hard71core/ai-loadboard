@@ -4,7 +4,9 @@ import type {
   LoadCreatePayload,
   LoadETA,
   LoginPayload,
+  ProfileUpdatePayload,
   RegisterPayload,
+  User,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -54,6 +56,15 @@ export async function fetchMatches(token: string): Promise<Load[]> {
   return handle<Load[]>(res, "Failed to load recommended loads");
 }
 
+/** Every load the caller shows up on, either side — posted as shipper or
+accepted as carrier, any status. Backs the personal-cabinet page. */
+export async function fetchMyLoads(token: string): Promise<Load[]> {
+  const res = await fetch(`${API_URL}/api/loads/mine`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handle<Load[]>(res, "Failed to load your loads");
+}
+
 export async function createLoad(
   payload: LoadCreatePayload,
   token: string,
@@ -75,6 +86,18 @@ export async function acceptLoad(id: number, token: string): Promise<Load> {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handle<Load>(res, "Failed to accept the load");
+}
+
+export async function updateProfile(payload: ProfileUpdatePayload, token: string): Promise<User> {
+  const res = await fetch(`${API_URL}/api/auth/me`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return handle<User>(res, "Failed to update your profile");
 }
 
 export async function registerUser(payload: RegisterPayload): Promise<AuthResponse> {

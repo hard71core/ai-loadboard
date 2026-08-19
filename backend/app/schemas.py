@@ -37,6 +37,17 @@ class UserCreate(BaseModel):
     role: UserRole
 
 
+class UserUpdate(BaseModel):
+    """PATCH /api/auth/me — company_name is the only field a user can
+    self-edit for now (no email/password change endpoint yet). Email and
+    role stay fixed post-registration: email is the login identifier and
+    role drives authorization checks throughout loads.py/matching.py, so
+    letting either change here would need its own dedicated review, not a
+    drive-by addition to this schema."""
+
+    company_name: str = Field(min_length=1)
+
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr

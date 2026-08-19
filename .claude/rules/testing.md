@@ -29,7 +29,7 @@ CI (`.github/workflows/ci.yml`) runs the exact same way, against a
 `postgres:16-alpine` service container — if a test passes locally against a
 real DB, it'll pass in CI too, and vice versa.
 
-**Coverage is 99% line coverage across `app/`, 60 tests, as of the test-coverage
+**Coverage is 99% line coverage across `app/`, 69 tests, as of the test-coverage
 pass that closed this out** (`pytest --cov=app --cov-report=term-missing`
 reports it per-module) — every `api/routes/*` module and `core/eta.py` at
 100%, `core/llm.py` and `core/security.py` at ~98%. The two remaining gaps
@@ -75,13 +75,20 @@ results, network errors, HTTP error status, and the in-memory cache
 actually short-circuiting a second call), `backend/tests/test_auth.py`
 (register/login/me and their failure branches — duplicate email, wrong
 password, no token, a malformed token, a validly-signed token for a
-nonexistent user, a validly-signed token with no `sub` claim at all),
-`backend/tests/test_auth_refresh.py` (refresh-token rotation and
+nonexistent user, a validly-signed token with no `sub` claim at all —
+plus `PATCH /me`: changes company_name and persists it, requires a token,
+422s on a blank name, and a regression test that renaming doesn't
+retroactively rewrite `shipper_name` on a load already posted under the
+old name), `backend/tests/test_auth_refresh.py` (refresh-token rotation and
 revocation — register issues both an access and a refresh token, a used
 refresh token is rejected on replay, an expired one is rejected too —
 backdated directly via `SessionLocal` rather than waiting out
 `REFRESH_TOKEN_EXPIRE_DAYS`, and logout revokes a token so a later refresh
-with it 401s).
+with it 401s), `backend/tests/test_my_loads.py` (`GET /api/loads/mine` —
+the personal-cabinet page's load list: requires a token, empty for a user
+with no loads, a shipper sees only their own posted loads, a carrier only
+their own accepted ones — not the shipper's untouched ones or another
+carrier's — and newest-first ordering).
 
 `backend/tests/conftest.py` holds the migration fixture above plus the
 shared `register_user(client, role)` helper (extracted out of
@@ -137,7 +144,7 @@ run, and unmounted-but-not-cleaned-up components would leak between tests
 
 **This is a first slice, the same philosophy as the backend's early test
 files** — not full coverage, the pieces that had the clearest reason to
-be tested first: 12 files, 94 tests today.
+be tested first: 13 files, 105 tests today.
 `frontend/src/AuthContext.test.tsx` is the biggest one — the
 bootstrap-via-refresh-token flow (success, failure, and the no-stored-
 token case), and `logout()` revoking server-side and clearing local state
@@ -183,15 +190,16 @@ failure. `global.fetch` is stubbed with `vi.stubGlobal` per test, no
 `AuthContext`/component involved — this is the one file in the frontend
 suite testing a plain module with no React in the loop besides
 `geocode.test.ts`. `frontend/src/App.test.tsx` covers the shell: routing
-(all four paths render their page), the brand link and nav active-state,
+(all five paths render their page), the brand link and nav active-state,
 the auth-status area's three states (loading → neither button nor badge,
 logged out → Log in/Sign up, logged in → company/role badge + Log out
-wired to `logout()`), and the auth modal — opens in the right mode from
+wired to `logout()`), the account badge being a `<Link>` to `/profile`
+(not just plain text), and the auth modal — opens in the right mode from
 either header button or a routed page's own `openAuth` prop, closes via
 the panel's `onClose` or an overlay click, and a click inside the panel
 itself doesn't close it (the overlay's `onClick` vs. the inner div's
 `stopPropagation()`). `./AuthContext` is mocked at the module level (a
-plain `useAuth()` stub, not a real `AuthProvider`) and so are the four
+plain `useAuth()` stub, not a real `AuthProvider`) and so are the five
 routed page components plus `AuthPanel` — each already has its own tests
 (or, for the pages, is still an open gap below) and pulls in `api.ts`
 dependencies this file has no reason to also exercise; `HomePage`'s mock
@@ -266,15 +274,32 @@ network/Nominatim/OSRM calls happen. 8 tests, and `RouteMap.tsx` lands at
 out not to cost any coverage after all, contrary to this file's earlier
 assumption that it "would need jsdom canvas/geometry shims."
 
-`DocsPage` and `RouteMap.tsx` were the last two files originally named in
-this gap — every page/component that item once listed by name now has at
-least some coverage. Not the same as full coverage: several files here
-still have real, deliberately-uncovered defensive-guard branches (see
-`LoadDetailPage.tsx`'s coverage note above), and modules never named in
-the original gap (`routing.ts`, `placeSearch.ts`, most of `geocode.ts`
-beyond `haversineMiles`) still have none at all. See
-`.claude/rules/security.md`'s Known Gaps for the current framing of
-what's left.
+`frontend/src/pages/ProfilePage.test.tsx` covers the personal-cabinet
+page: a logged-out visitor sees a login prompt instead of a profile and
+`fetchMyLoads` is never called; a logged-in user's profile fields render
+(company, email, role) and `fetchMyLoads` fires on mount; per-status
+counts (open/accepted/completed) are derived from the fetched list,
+scoped with `within()` against `.profile-stats` since the loads table
+below repeats the same words as row status badges (an unscoped query
+would be ambiguous); the empty state's copy differs by role ("posted" vs.
+"accepted"); the table renders a load's carrier once one's assigned and a
+row click navigates to `/loads/:id`; a `fetchMyLoads` failure surfaces an
+alert; and the edit-company-name flow — opens pre-filled, saves and calls
+`updateUser()` with the response so the header badge picks it up too, a
+failed save shows the error and stays in edit mode, and Cancel discards
+the draft without calling `updateProfile`. `../api` and `../AuthContext`
+are mocked at the module level, same pattern as `LoadDetailPage.test.tsx`.
+
+`DocsPage`, `RouteMap.tsx`, and `ProfilePage.tsx` were the last files
+originally named in this gap (`ProfilePage.tsx` joined the list the same
+change it was built in, not a leftover) — every page/component that item
+once listed by name now has at least some coverage. Not the same as full
+coverage: several files here still have real, deliberately-uncovered
+defensive-guard branches (see `LoadDetailPage.tsx`'s and `ProfilePage.tsx`'s
+coverage notes above), and modules never named in the original gap
+(`routing.ts`, `placeSearch.ts`, most of `geocode.ts` beyond
+`haversineMiles`) still have none at all. See `.claude/rules/security.md`'s
+Known Gaps for the current framing of what's left.
 
 CI (`.github/workflows/ci.yml`) runs `npm run test:coverage` as its own
 step, between lint and the type-check/build step — a test failure fails

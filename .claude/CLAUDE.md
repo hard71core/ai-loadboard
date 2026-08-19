@@ -8,8 +8,9 @@ A demo-stage, two-sided freight marketplace: a shipper posts a load, a carrier
 takes it directly — no broker. The backend is a plain FastAPI CRUD service
 (`backend/app/`) over two tables, the frontend is a React SPA (`frontend/`)
 with client-side routing (`react-router-dom`) — a marketing landing page at
-`/`, the load list at `/loads`, a load detail page at `/loads/:id`, and an
-in-app docs page at `/docs`, not a single screen anymore.
+`/`, the load list at `/loads`, a load detail page at `/loads/:id`, a
+personal-cabinet page at `/profile`, and an in-app docs page at `/docs`,
+not a single screen anymore.
 **Three of the 7 planned AI features have a working MVP**:
 natural-language load search (`POST /api/search`, `core/llm.py`, Claude
 Haiku 4.5, structured outputs, gated off by default behind
@@ -167,17 +168,22 @@ core/
 api/
   deps.py             re-exports get_db/get_current_user for routes
   routes/
-    auth.py            register/login/me/refresh/logout — register and
-                       login return an access+refresh pair; refresh rotates
-                       (old refresh token dies the moment a new one is
-                       issued); logout revokes without needing a Bearer
-                       header, same trust model as the refresh token itself
-    loads.py           list/detail/create/accept/complete — the detail
+    auth.py            register/login/me/refresh/logout/PATCH me — register
+                       and login return an access+refresh pair; refresh
+                       rotates (old refresh token dies the moment a new one
+                       is issued); logout revokes without needing a Bearer
+                       header, same trust model as the refresh token itself;
+                       PATCH /me self-edits company_name only (email/role
+                       stay fixed post-registration), doesn't retroactively
+                       rename the caller's past loads — see schemas.UserUpdate
+    loads.py           list/detail/create/accept/complete/mine — the detail
                         route is GET /{load_id:int}; the :int converter is
                         load-bearing, not just typing hygiene, see its
                         docstring for why (route order vs. matching.py);
                         accept sets loads.accepted_at, the only "transit
-                        started" timestamp eta.py has to work with
+                        started" timestamp eta.py has to work with; GET
+                        /mine backs the personal-cabinet page — every load
+                        the caller shows up on, either side, no role gate
     matching.py          smart matching — deterministic ranking heuristic
                           (equipment + lane-state overlap with a carrier's
                           own history), no LLM, no ML model yet
@@ -215,6 +221,16 @@ pages/
                       correctly on RouteMap/EtaWindow instead of a typo
                       silently breaking them later
   LoadDetailPage.tsx  "/loads/:id" — full detail for one load, accept action
+  ProfilePage.tsx      "/profile" — personal cabinet: profile fields
+                        (company_name is the only self-editable one, via
+                        PATCH /api/auth/me) plus GET /api/loads/mine's list
+                        (every load the caller shows up on, either side) with
+                        per-status counts derived from it client-side, no
+                        separate stats endpoint. Reachable from the header's
+                        account badge (App.tsx), logged-in users only —
+                        shows a login prompt otherwise, same pattern as
+                        LoadDetailPage's accept button for a logged-out
+                        visitor
   DocsPage.tsx         "/docs" — links out to the static copies of
                         docs/*.html + *.pdf under frontend/public/docs/ (see
                         "Docs" below for the sync duty this creates)
@@ -248,6 +264,10 @@ AuthContext.tsx     auth state (token/user), localStorage-backed (both the
                     next refresh, the server still enforces expiry on
                     every request) so an active session never visibly
                     401s. A failed refresh (dead/revoked token) logs out.
+                    Also exposes updateUser() for ProfilePage.tsx — a
+                    company_name edit doesn't touch either token (they
+                    encode the user's email, not their company_name), so it
+                    just replaces the cached user object, no re-issue needed
 api.ts               every backend call in one place
 geocode.ts            the only frontend place that calls a third-party
                        geocoder (Nominatim, keyless) — see security.md for
@@ -319,6 +339,13 @@ layer (`api/routes/loads.py`) — this used to be a P0 gap, now closed.
 `Load` also has `accepted_at` (nullable, set server-side by `accept_load`)
 — added for the ETA MVP (`core/eta.py`), it's the only "transit started"
 timestamp the system has without a telematics/GPS feed.
+`Load.shipper_name`/`carrier_name` stay a denormalized display cache set
+from `company_name` at post/accept time, not a live join — `PATCH
+/api/auth/me` (the personal-cabinet page's company-name edit) only affects
+`users.company_name` going forward, it doesn't rewrite the name cached on
+loads posted/accepted before the rename. Accepted trade-off of the existing
+denormalization design, not a bug (see `update_me()`'s docstring,
+`api/routes/auth.py`).
 Still-open gaps (the refresh token's localStorage/XSS exposure, test
 coverage) are tracked in `.claude/rules/security.md`, not repeated here.
 

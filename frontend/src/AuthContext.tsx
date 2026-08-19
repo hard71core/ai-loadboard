@@ -14,6 +14,7 @@ interface AuthContextValue {
   token: string | null;
   loading: boolean;
   setAuth: (auth: AuthResponse) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -110,6 +111,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     applyAuth(auth);
   }
 
+  // A profile edit (ProfilePage.tsx) doesn't touch either token — the
+  // access/refresh pair encodes the user's email, not their company_name,
+  // so there's no need to re-issue anything, just update the cached user
+  // object every consumer reads from context.
+  function updateUser(updated: User) {
+    setUser(updated);
+  }
+
   function logout() {
     const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (storedRefreshToken) {
@@ -122,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, setAuth, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, setAuth, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

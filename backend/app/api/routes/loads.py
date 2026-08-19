@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ... import models, schemas
@@ -15,6 +16,33 @@ def list_loads(status: str | None = None, db: Session = Depends(get_db)):
     if status:
         query = query.filter(models.Load.status == status)
     return query.order_by(models.Load.created_at.desc()).all()
+
+
+@router.get("/mine", response_model=list[schemas.LoadOut])
+def list_my_loads(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Backs the personal-cabinet page — every load the caller shows up on,
+    either side: posted as shipper or accepted as carrier, any status. No
+    role gate (unlike matching.py's /matches, carrier-only) — a shipper's
+    "mine" is what they posted, a carrier's is what they've accepted, both
+    are valid, non-empty queries. "mine" isn't digits, so it never collides
+    with GET /{load_id:int} below regardless of route registration order —
+    see that route's docstring for the collision this same shape of literal
+    path had to avoid with matching.py's /matches before it got the :int
+    converter."""
+    return (
+        db.query(models.Load)
+        .filter(
+            or_(
+                models.Load.shipper_id == current_user.id,
+                models.Load.carrier_id == current_user.id,
+            )
+        )
+        .order_by(models.Load.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/{load_id:int}", response_model=schemas.LoadOut)

@@ -8,6 +8,7 @@ import DocsPage from "./pages/DocsPage";
 import HomePage from "./pages/HomePage";
 import LoadDetailPage from "./pages/LoadDetailPage";
 import LoadsPage from "./pages/LoadsPage";
+import ProfilePage from "./pages/ProfilePage";
 
 export default function App() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -41,9 +42,9 @@ export default function App() {
           <div className="auth-status">
             {authLoading ? null : user ? (
               <>
-                <span className="user-badge">
+                <Link to="/profile" className="user-badge">
                   {user.company_name} · {ROLE_LABEL[user.role]}
-                </span>
+                </Link>
                 <button className="btn small" onClick={logout}>
                   Log out
                 </button>
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="/" element={<HomePage openAuth={openAuth} />} />
         <Route path="/loads" element={<LoadsPage openAuth={openAuth} />} />
         <Route path="/loads/:id" element={<LoadDetailPage openAuth={openAuth} />} />
+        <Route path="/profile" element={<ProfilePage openAuth={openAuth} />} />
         <Route path="/docs" element={<DocsPage />} />
       </Routes>
     </div>

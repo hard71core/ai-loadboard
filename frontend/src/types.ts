@@ -67,3 +67,10 @@ export interface LoginPayload {
   email: string;
   password: string;
 }
+
+/** PATCH /api/auth/me — company_name is the only field a user can
+self-edit today (email/role stay fixed post-registration, see the
+backend's schemas.UserUpdate docstring). */
+export interface ProfileUpdatePayload {
+  company_name: string;
+}

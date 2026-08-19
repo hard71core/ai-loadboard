@@ -78,3 +78,22 @@ def logout(payload: schemas.RefreshPayload, db: Session = Depends(get_db)):
 @router.get("/me", response_model=schemas.UserOut)
 def me(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=schemas.UserOut)
+def update_me(
+    payload: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Self-service profile edit — company_name only, see schemas.UserUpdate.
+    Doesn't touch loads.shipper_name/carrier_name on any of the user's past
+    loads: those are a denormalized display cache set at the time of each
+    action (models.py's Load docstring), not a live join, so a renamed
+    company only shows the new name on loads posted/accepted from here on,
+    not retroactively on old ones. That's an accepted trade-off of the
+    existing denormalization design, not a bug introduced here."""
+    current_user.company_name = payload.company_name
+    db.commit()
+    db.refresh(current_user)
+    return current_user

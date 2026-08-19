@@ -172,6 +172,12 @@ a {
   border-radius: 999px;
   padding: 6px 13px;
   font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+
+.user-badge:hover {
+  border-color: var(--border-strong);
 }
 
 .container {
@@ -460,6 +466,15 @@ a {
   font-size: 12px;
   color: var(--muted);
   font-weight: 600;
+}
+
+/* Same tiles as .stats above, reused on ProfilePage — left-aligned in the
+page flow rather than centered/animated like the marketing hero's. */
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 0 0 22px;
 }
 
 /* ---------- search + toolbar ---------- */
@@ -1411,7 +1426,8 @@ no stats, for pages that aren't the marketing landing page. */
 }
 
 @media (max-width: 900px) {
-  .stats {
+  .stats,
+  .profile-stats {
     grid-template-columns: 1fr;
   }
 
